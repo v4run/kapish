@@ -119,3 +119,52 @@ func TestValidatePrompt_MalformedToken(t *testing.T) {
 	errs := validatePrompt("hello {cluster ")
 	require.NotEmpty(t, errs)
 }
+
+func TestValidateMgmt_EmptyAccepted(t *testing.T) {
+	errs := validateMgmt(ManagementClustersConfig{})
+	assert.Empty(t, errs)
+}
+
+func TestValidateMgmt_DuplicateNames(t *testing.T) {
+	m := ManagementClustersConfig{
+		Entries: []ManagementClusterEntry{
+			{Name: "a"},
+			{Name: "a"},
+		},
+	}
+	errs := validateMgmt(m)
+	require.NotEmpty(t, errs)
+	assert.Contains(t, errs[0].Error(), "duplicate")
+}
+
+func TestValidateMgmt_EmptyEntryName(t *testing.T) {
+	m := ManagementClustersConfig{
+		Entries: []ManagementClusterEntry{{Name: ""}},
+	}
+	errs := validateMgmt(m)
+	require.NotEmpty(t, errs)
+	assert.Contains(t, errs[0].Error(), "name")
+}
+
+func TestValidateMgmt_CurrentMustReferenceEntry(t *testing.T) {
+	m := ManagementClustersConfig{
+		Current: "missing",
+		Entries: []ManagementClusterEntry{{Name: "a"}},
+	}
+	errs := validateMgmt(m)
+	require.NotEmpty(t, errs)
+	assert.Contains(t, errs[0].Error(), "current")
+	assert.Contains(t, errs[0].Error(), "missing")
+}
+
+func TestValidateMgmt_HappyPath(t *testing.T) {
+	m := ManagementClustersConfig{
+		Current: "a",
+		Entries: []ManagementClusterEntry{
+			{Name: "a"},
+			{Name: "b"},
+		},
+	}
+	errs := validateMgmt(m)
+	assert.Empty(t, errs)
+}

@@ -73,6 +73,26 @@ func validatePrompt(p string) []error {
 	return errs
 }
 
+func validateMgmt(m ManagementClustersConfig) []error {
+	var errs []error
+	seen := make(map[string]bool, len(m.Entries))
+	for i, e := range m.Entries {
+		if e.Name == "" {
+			errs = append(errs, fmt.Errorf("config: managementClusters.entries[%d].name must not be empty", i))
+			continue
+		}
+		if seen[e.Name] {
+			errs = append(errs, fmt.Errorf("config: duplicate managementClusters.entries name %q", e.Name))
+			continue
+		}
+		seen[e.Name] = true
+	}
+	if m.Current != "" && !seen[m.Current] {
+		errs = append(errs, fmt.Errorf("config: managementClusters.current %q does not match any entry", m.Current))
+	}
+	return errs
+}
+
 func validateShell(s ShellConfig) []error {
 	var errs []error
 	if s.Command == "" {
