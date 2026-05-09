@@ -1,0 +1,4 @@
+managementClusters:
+  current: prod-mgmt
+  entries
+    - name: oops missing colon

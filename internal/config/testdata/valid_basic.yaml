@@ -1,0 +1,25 @@
+managementClusters:
+  current: prod-mgmt
+  entries:
+    - name: prod-mgmt
+      kubeconfig: /home/me/.kube/prod
+      context: prod-admin
+
+shell:
+  command: /bin/zsh
+  cwd: /tmp
+  env:
+    EDITOR: vim
+  aliases:
+    k: kubectl
+  prompt: "[{cluster}] $ "
+
+ui:
+  theme: light
+  refreshIntervalSec: 60
+  oneShot: true
+
+web:
+  defaultPort: 8080
+  openBrowser: false
+  bindAddr: 127.0.0.1
