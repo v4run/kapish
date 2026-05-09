@@ -6,10 +6,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "version" {
-		fmt.Println("kapish dev")
-		return
+	if err := newRootCmd().Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, "kapish:", err)
+		os.Exit(1)
 	}
-	fmt.Fprintln(os.Stderr, "kapish: cobra wiring lands in Task 2")
-	os.Exit(2)
 }
