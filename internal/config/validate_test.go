@@ -35,3 +35,60 @@ func TestValidateShell_NotInPath(t *testing.T) {
 	require.NotEmpty(t, errs)
 	assert.Contains(t, errs[0].Error(), "not found")
 }
+
+func TestValidateEnv_KeyRules(t *testing.T) {
+	cases := []struct {
+		name    string
+		key     string
+		wantErr bool
+	}{
+		{"upper letters", "KUBECONFIG", false},
+		{"with underscore", "AWS_REGION", false},
+		{"with digits", "FOO123", false},
+		{"leading underscore", "_FOO", false},
+		{"leading digit", "1FOO", true},
+		{"lowercase", "foo", true},
+		{"empty", "", true},
+		{"spaces", "FOO BAR", true},
+		{"hyphen", "FOO-BAR", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			env := map[string]string{tc.key: "v"}
+			errs := validateEnv(env)
+			if tc.wantErr {
+				assert.NotEmpty(t, errs)
+			} else {
+				assert.Empty(t, errs)
+			}
+		})
+	}
+}
+
+func TestValidateAliases_NameRules(t *testing.T) {
+	cases := []struct {
+		name    string
+		alias   string
+		wantErr bool
+	}{
+		{"simple", "k", false},
+		{"with underscore", "k_get", false},
+		{"with digits", "k1", false},
+		{"with hyphen", "k-get", false},
+		{"leading digit", "1k", true},
+		{"with space", "k get", true},
+		{"with equals", "k=v", true},
+		{"empty", "", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			a := map[string]string{tc.alias: "kubectl"}
+			errs := validateAliases(a)
+			if tc.wantErr {
+				assert.NotEmpty(t, errs)
+			} else {
+				assert.Empty(t, errs)
+			}
+		})
+	}
+}
