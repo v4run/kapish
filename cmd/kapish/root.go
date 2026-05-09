@@ -15,6 +15,7 @@ env vars, and a prompt scoped to the chosen cluster.
 Run "kapish" (no args) for the TUI, or "kapish serve" for the web UI.`,
 		SilenceUsage: true,
 	}
+	registerGlobalFlags(root)
 	root.AddCommand(newVersionCmd())
 	return root
 }
