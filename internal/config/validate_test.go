@@ -92,3 +92,30 @@ func TestValidateAliases_NameRules(t *testing.T) {
 		})
 	}
 }
+
+func TestValidatePrompt_KnownTokens(t *testing.T) {
+	cases := []string{
+		"",
+		"$ ",
+		"[{cluster}] ",
+		"[{cluster}/{ns}] {ctx} {time} ",
+		"({provider}) > ",
+	}
+	for _, p := range cases {
+		t.Run(p, func(t *testing.T) {
+			errs := validatePrompt(p)
+			assert.Empty(t, errs, "should accept: %q", p)
+		})
+	}
+}
+
+func TestValidatePrompt_UnknownToken(t *testing.T) {
+	errs := validatePrompt("[{cluster}] {region} ")
+	require.NotEmpty(t, errs)
+	assert.Contains(t, errs[0].Error(), "{region}")
+}
+
+func TestValidatePrompt_MalformedToken(t *testing.T) {
+	errs := validatePrompt("hello {cluster ")
+	require.NotEmpty(t, errs)
+}

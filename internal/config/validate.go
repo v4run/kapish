@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 // supportedShells is the v1 allowlist of basenames. v2 may add nu, pwsh.
@@ -39,6 +40,34 @@ func validateAliases(a map[string]string) []error {
 	for name := range a {
 		if !aliasNameRE.MatchString(name) {
 			errs = append(errs, fmt.Errorf("config: alias name %q is not a valid identifier", name))
+		}
+	}
+	return errs
+}
+
+// allowedPromptTokens are the v1 substitutable tokens. v2 may add {git}, {region}.
+var allowedPromptTokens = map[string]bool{
+	"cluster":  true,
+	"ns":       true,
+	"provider": true,
+	"ctx":      true,
+	"time":     true,
+}
+
+// promptTokenRE matches '{name}'. We use the regex to find tokens; we also
+// independently check that every '{' has a matching '}' to catch
+// "hello {cluster " kind of mistakes.
+var promptTokenRE = regexp.MustCompile(`\{([A-Za-z_]+)\}`)
+
+func validatePrompt(p string) []error {
+	var errs []error
+	if open, close := strings.Count(p, "{"), strings.Count(p, "}"); open != close {
+		errs = append(errs, fmt.Errorf("config: prompt template has unbalanced { } braces"))
+		return errs
+	}
+	for _, m := range promptTokenRE.FindAllStringSubmatch(p, -1) {
+		if !allowedPromptTokens[m[1]] {
+			errs = append(errs, fmt.Errorf("config: unknown prompt token {%s}", m[1]))
 		}
 	}
 	return errs
