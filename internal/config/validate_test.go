@@ -168,3 +168,24 @@ func TestValidateMgmt_HappyPath(t *testing.T) {
 	errs := validateMgmt(m)
 	assert.Empty(t, errs)
 }
+
+func TestValidate_HappyDefaults(t *testing.T) {
+	require.NoError(t, Validate(Defaults()))
+}
+
+func TestValidate_AggregatesErrors(t *testing.T) {
+	c := Defaults()
+	c.Shell.Env = map[string]string{"bad-key": "x"}        // env error
+	c.Shell.Aliases = map[string]string{"1bad": "kubectl"} // alias error
+	c.Shell.Prompt = "{nope}"                              // prompt error
+	c.ManagementClusters.Current = "nada"                  // mgmt error
+
+	err := Validate(c)
+	require.Error(t, err)
+	// Validate should surface all errors at once, joined.
+	msg := err.Error()
+	assert.Contains(t, msg, "env key")
+	assert.Contains(t, msg, "alias name")
+	assert.Contains(t, msg, "{nope}")
+	assert.Contains(t, msg, "current")
+}

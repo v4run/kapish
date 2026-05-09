@@ -111,3 +111,19 @@ func validateShell(s ShellConfig) []error {
 	}
 	return errs
 }
+
+// Validate runs every individual validator and returns a single error that
+// joins all messages (errors.Join) so the user sees every problem at once,
+// not just the first.
+func Validate(c Config) error {
+	var all []error
+	all = append(all, validateShell(c.Shell)...)
+	all = append(all, validateEnv(c.Shell.Env)...)
+	all = append(all, validateAliases(c.Shell.Aliases)...)
+	all = append(all, validatePrompt(c.Shell.Prompt)...)
+	all = append(all, validateMgmt(c.ManagementClusters)...)
+	if len(all) == 0 {
+		return nil
+	}
+	return errors.Join(all...)
+}
