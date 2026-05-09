@@ -17,5 +17,6 @@ Run "kapish" (no args) for the TUI, or "kapish serve" for the web UI.`,
 	}
 	registerGlobalFlags(root)
 	root.AddCommand(newVersionCmd())
+	root.AddCommand(newConfigCmd())
 	return root
 }
