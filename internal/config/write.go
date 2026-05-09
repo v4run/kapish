@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/gofrs/flock"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,6 +22,16 @@ func WriteToFile(path string, c Config) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return fmt.Errorf("config: mkdir %s: %w", filepath.Dir(path), err)
 	}
+
+	lockPath := path + ".lock"
+	lk := flock.New(lockPath)
+	if err := lk.Lock(); err != nil {
+		return fmt.Errorf("config: lock %s: %w", lockPath, err)
+	}
+	defer func() {
+		_ = lk.Unlock()
+		_ = os.Remove(lockPath)
+	}()
 
 	out, err := renderYAML(path, c)
 	if err != nil {
