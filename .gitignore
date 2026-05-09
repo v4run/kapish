@@ -1,0 +1,18 @@
+# binaries
+/bin/
+/dist/
+
+# Go test artifacts
+*.test
+*.out
+coverage.txt
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# kapish runtime
+*.kubeconfig
+kapish-*.tmp/
