@@ -19,7 +19,8 @@ cluster and lets you drop into a shell with KUBECONFIG, aliases,
 env vars, and a prompt scoped to the chosen cluster.
 
 Run "kapish" (no args) for the TUI, or "kapish serve" for the web UI.`,
-		SilenceUsage: true,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			g, err := readGlobalFlags(cmd)
 			if err != nil {
