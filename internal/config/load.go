@@ -68,8 +68,15 @@ func ApplyOverrides(c Config, o FlagOverrides) Config {
 		}
 		idx := indexOfCurrent(out.ManagementClusters)
 		if idx < 0 {
-			idx = 0
-			out.ManagementClusters.Current = out.ManagementClusters.Entries[0].Name
+			if out.ManagementClusters.Current == "" {
+				// No current designated; auto-select entry[0] for the override target.
+				idx = 0
+				out.ManagementClusters.Current = out.ManagementClusters.Entries[0].Name
+			} else {
+				// Bad config: Current references a missing entry. Don't silently
+				// re-point; leave it alone so Validate() reports the misconfiguration.
+				return out
+			}
 		}
 		if o.Kubeconfig != "" {
 			out.ManagementClusters.Entries[idx].Kubeconfig = o.Kubeconfig

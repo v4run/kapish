@@ -51,3 +51,29 @@ func TestApplyOverrides_SynthesizesEntryWhenAbsent(t *testing.T) {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+// When Current references a missing entry, ApplyOverrides must NOT silently
+// re-point to entry[0]. Validate() should still see the misconfiguration.
+func TestApplyOverrides_PreservesStaleCurrent(t *testing.T) {
+	c := Defaults()
+	c.ManagementClusters = ManagementClustersConfig{
+		Current: "missing",
+		Entries: []ManagementClusterEntry{{Name: "real"}},
+	}
+
+	got := ApplyOverrides(c, FlagOverrides{
+		Kubeconfig: "/tmp/k",
+		Context:    "ctx",
+	})
+
+	// Current preserved as-is (still bad).
+	assert.Equal(t, "missing", got.ManagementClusters.Current)
+	// No silent override of entries[0].
+	assert.Equal(t, "", got.ManagementClusters.Entries[0].Kubeconfig)
+	assert.Equal(t, "", got.ManagementClusters.Entries[0].Context)
+
+	// Validate must fail on this — it's still a misconfiguration.
+	err := Validate(got)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "current")
+}
