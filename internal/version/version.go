@@ -46,7 +46,26 @@ func String() string {
 	return "dev"
 }
 
+// commit returns the short revision: ldflags-injected Commit if set, else
+// vcs.revision from BuildInfo (truncated to 7 chars), else "unknown".
+func commit() string {
+	if Commit != "" && Commit != "unknown" {
+		return Commit
+	}
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" {
+				if len(s.Value) > 7 {
+					return s.Value[:7]
+				}
+				return s.Value
+			}
+		}
+	}
+	return "unknown"
+}
+
 // Long is the human-readable version line for `kapish version`.
 func Long() string {
-	return fmt.Sprintf("kapish %s (commit %s)", String(), Commit)
+	return fmt.Sprintf("kapish %s (commit %s)", String(), commit())
 }

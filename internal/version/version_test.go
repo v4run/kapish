@@ -29,3 +29,13 @@ func TestLongIncludesString(t *testing.T) {
 		t.Fatalf("Long() = %q, expected to start with 'kapish '", long)
 	}
 }
+
+func TestCommitNotEmpty(t *testing.T) {
+	c := commit()
+	if c == "" {
+		t.Fatalf("commit() returned empty")
+	}
+	if strings.ContainsAny(c, " \t\n") {
+		t.Fatalf("commit() = %q, must not contain whitespace", c)
+	}
+}
