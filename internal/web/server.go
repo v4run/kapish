@@ -50,6 +50,7 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/health", s.handleHealth)
+	s.mux.HandleFunc("GET /api/v1/clusters", s.handleGetClusters)
 	// More routes added in later tasks.
 	// Catch-all for unknown /api/v1/ paths -> 404 JSON.
 	s.mux.HandleFunc("/api/v1/", func(w http.ResponseWriter, r *http.Request) {
