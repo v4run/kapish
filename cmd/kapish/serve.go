@@ -26,7 +26,7 @@ func newServeCmd() *cobra.Command {
 	c.Flags().Int("port", 0, "Port to bind (0 = pick a free port)")
 	c.Flags().String("bind", "127.0.0.1", "Address to bind (non-loopback prints a warning)")
 	c.Flags().Bool("no-open", false, "Don't open the browser automatically")
-	c.Flags().Bool("dev", false, "Dev mode (reserved for Vite proxy; currently a no-op)")
+	c.Flags().Bool("dev", false, "Dev mode: proxy / to the Vite dev server (HMR); /api stays on Go")
 	return c
 }
 
@@ -38,6 +38,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	port, _ := cmd.Flags().GetInt("port")
 	bind, _ := cmd.Flags().GetString("bind")
 	noOpen, _ := cmd.Flags().GetBool("no-open")
+	devMode, _ := cmd.Flags().GetBool("dev")
 
 	cfgPath, err := kconfig.ResolvePath(kconfig.PathSources{
 		Flag: g.ConfigPath, EnvVar: os.Getenv("KAPISH_CONFIG"),
@@ -81,10 +82,20 @@ func runServe(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("connect to management cluster: %w", err)
 	}
 
-	srv, err := web.New(web.Options{
+	viteTarget := os.Getenv("KAPISH_VITE_URL")
+	if viteTarget == "" {
+		viteTarget = "http://127.0.0.1:5173"
+	}
+
+	webOpts := web.Options{
 		CapiClient: client, AppConfig: app, MgmtContext: client.Context(),
 		ConfigPath: cfgPath, BindAddr: bind, Port: port,
-	})
+	}
+	if devMode {
+		webOpts.Dev = true
+		webOpts.DevTarget = viteTarget
+	}
+	srv, err := web.New(webOpts)
 	if err != nil {
 		return err
 	}
@@ -92,8 +103,13 @@ func runServe(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	url := "http://" + addr + "/"
-	fmt.Println("kapish web UI:", url)
+	goURL := "http://" + addr + "/"
+	if devMode {
+		fmt.Printf("kapish dev mode — Go API on http://%s/api, proxying / to %s\n", addr, viteTarget)
+		fmt.Printf("Run 'VITE_KAPISH_API=http://%s npm run dev' in internal/web/frontend\n", addr)
+	} else {
+		fmt.Println("kapish web UI:", goURL)
+	}
 
 	rootCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -135,8 +151,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	if !noOpen && app.Web.OpenBrowser {
-		_ = openBrowser(url)
+	if !noOpen && !devMode && app.Web.OpenBrowser {
+		_ = openBrowser(goURL)
 	}
 
 	srvErr := make(chan error, 1)

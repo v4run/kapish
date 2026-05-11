@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"time"
@@ -20,6 +21,11 @@ type Options struct {
 	ConfigPath  string // for config PUT; empty disables persistence
 	BindAddr    string // default "127.0.0.1"
 	Port        int    // 0 = pick free port at Listen time
+	// Dev enables reverse-proxy mode: "/" is proxied to the Vite dev server at
+	// DevTarget (default "http://127.0.0.1:5173") so that HMR works during
+	// frontend development. /api/... is always served by the Go server.
+	Dev       bool
+	DevTarget string // default "http://127.0.0.1:5173" when Dev is true
 }
 
 // Server is the kapish web server.
@@ -70,9 +76,23 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/v1/", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
 	})
-	// Fallback: serve embedded frontend. API routes above are more specific and
-	// win via Go 1.22 ServeMux precedence.
-	s.mux.Handle("/", http.FileServer(http.FS(frontendRoot())))
+	// Fallback: serve embedded frontend or proxy to Vite dev server.
+	// API routes above are more specific and win via Go 1.22 ServeMux precedence.
+	if s.opts.Dev {
+		target := s.opts.DevTarget
+		if target == "" {
+			target = "http://127.0.0.1:5173"
+		}
+		proxy, err := devProxy(target)
+		if err != nil {
+			slog.Warn("web: dev proxy: bad target URL, falling back to file server", "target", target, "err", err)
+			s.mux.Handle("/", http.FileServer(http.FS(frontendRoot())))
+		} else {
+			s.mux.Handle("/", proxy)
+		}
+	} else {
+		s.mux.Handle("/", http.FileServer(http.FS(frontendRoot())))
+	}
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
