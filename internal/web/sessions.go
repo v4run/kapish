@@ -63,6 +63,40 @@ func (s *sessionStore) remove(id string) {
 	s.mu.Unlock()
 }
 
+// evictStale removes sessions that were never connected (used==false) and are
+// older than ttl. The SpawnPlan's temp dir is cleaned up best-effort.
+func (s *sessionStore) evictStale(ttl time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for id, e := range s.m {
+		if !e.used && time.Since(e.sess.created) > ttl {
+			if e.sess != nil && e.sess.plan != nil {
+				_ = e.sess.plan.Cleanup()
+			}
+			delete(s.m, id)
+		}
+	}
+}
+
+// janitor runs a background loop that calls evictStale on each tick. It exits
+// when ctx is cancelled. tickInterval is ttl/2, floored at 10s.
+func (s *sessionStore) janitor(ctx context.Context, ttl time.Duration) {
+	interval := ttl / 2
+	if interval < 10*time.Second {
+		interval = 10 * time.Second
+	}
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			s.evictStale(ttl)
+		}
+	}
+}
+
 func (s *Server) handlePostSessions(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Namespace string `json:"namespace"`

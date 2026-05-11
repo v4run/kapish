@@ -57,6 +57,9 @@ func runServe(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Best-effort sweep of stale temp dirs from prior runs.
+	_, _ = sweepStaleTempDirs(os.TempDir(), 24*time.Hour)
+
 	if bind != "127.0.0.1" && bind != "localhost" && bind != "::1" {
 		fmt.Fprintf(os.Stderr, "warning: binding to %s exposes kapish with no authentication\n", bind)
 	}

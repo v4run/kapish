@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/v4run/kapish/internal/capi"
 	kconfig "github.com/v4run/kapish/internal/config"
@@ -44,6 +45,7 @@ func New(opts Options) (*Server, error) {
 		mux:      http.NewServeMux(),
 	}
 	s.routes()
+	go s.sessions.janitor(context.Background(), 60*time.Second)
 	return s, nil
 }
 

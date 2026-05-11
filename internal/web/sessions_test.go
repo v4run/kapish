@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,4 +49,22 @@ func TestSessionStore_CreateLookupTokenSingleUse(t *testing.T) {
 	id2, _ := st.create(&ptySession{})
 	_, ok = st.consumeToken(id2, "wrong")
 	assert.False(t, ok)
+}
+
+func TestSessionStore_JanitorEvictsStaleUnusedSessions(t *testing.T) {
+	st := newSessionStore()
+	// Create a session and backdate its created time.
+	sess := &ptySession{created: time.Now().Add(-2 * time.Minute)}
+	id, _ := st.create(sess)
+	// Also a fresh one that should survive.
+	freshID, _ := st.create(&ptySession{created: time.Now()})
+
+	st.evictStale(time.Minute)
+
+	st.mu.Lock()
+	_, oldExists := st.m[id]
+	_, freshExists := st.m[freshID]
+	st.mu.Unlock()
+	assert.False(t, oldExists, "stale unused session should be evicted")
+	assert.True(t, freshExists, "fresh session should survive")
 }
