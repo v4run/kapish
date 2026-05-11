@@ -59,6 +59,12 @@ func (m Model) viewList() string {
 				cursor, name, c.Namespace, phaseStyled(c.Phase), ver, prov, phaseGlyph(c.Phase)))
 		}
 	}
+	if m.confirmingSpawn {
+		b.WriteString("\n" + styleRed.Render(fmt.Sprintf(
+			"Cluster %s is %s. Spawn shell anyway? (y/N)",
+			m.spawnTarget.Name, m.spawnTarget.Phase,
+		)))
+	}
 	b.WriteString("\n" + styleStatus.Render("↑↓ nav · / filter · ⏎ shell · r refresh · m mgmt · s settings · q quit"))
 	return b.String()
 }

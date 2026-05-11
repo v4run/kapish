@@ -52,6 +52,11 @@ type Model struct {
 
 	mgmtContext string
 
+	// confirmingSpawn is true when a Failed/Deleting cluster was selected and
+	// the user must confirm before spawning.
+	confirmingSpawn bool
+	spawnTarget     capi.Cluster
+
 	width, height int
 }
 
@@ -69,8 +74,7 @@ func New(cfg Config) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	// Real entry wires the LIST+WATCH cmds here; tests drive Update directly.
-	return nil
+	return tea.Batch(m.loadCmd(), m.refreshTickCmd())
 }
 
 // recomputeFiltered re-applies the filter and clamps the cursor, keeping it
@@ -122,6 +126,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.screen = screenError
 		return m, nil
 
+	case shellExitedMsg:
+		if m.cfg.OneShot {
+			return m, tea.Quit
+		}
+		m.screen = screenReady
+		return m, nil
+
+	case refreshTickMsg:
+		return m, tea.Batch(m.loadCmd(), m.refreshTickCmd())
+
+	case spawnReadyMsg:
+		return m, tea.ExecProcess(msg.plan.Cmd, func(err error) tea.Msg {
+			_ = msg.plan.Cleanup()
+			return shellExitedMsg{err: err}
+		})
+
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	}
@@ -129,6 +149,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Spawn confirmation: intercept all keys before any other handling.
+	if m.confirmingSpawn {
+		switch msg.String() {
+		case "y", "Y":
+			m.confirmingSpawn = false
+			m.screen = screenSpawning
+			return m, m.spawnCmd(m.spawnTarget)
+		default:
+			m.confirmingSpawn = false
+			return m, nil
+		}
+	}
+
 	// Filter mode: typing goes to the textinput; Esc/Enter exit it.
 	if m.filter.Focused() {
 		switch msg.Type {
@@ -210,8 +243,20 @@ func (m *Model) stickyKeyFromCursor() {
 	}
 }
 
-func (m Model) loadCmd() tea.Cmd { return nil }                                                      // TODO(plan3): replace stub in Task 7
-func (m Model) beginSpawn() (tea.Model, tea.Cmd) { return m, nil }                                  // TODO(plan3): replace stub in Task 7
+func (m Model) beginSpawn() (tea.Model, tea.Cmd) {
+	if m.cursor < 0 || m.cursor >= len(m.filtered) {
+		return m, nil
+	}
+	c := m.filtered[m.cursor]
+	if c.Phase == "Failed" || c.Phase == "Deleting" {
+		m.confirmingSpawn = true
+		m.spawnTarget = c
+		return m, nil
+	}
+	m.screen = screenSpawning
+	return m, m.spawnCmd(c)
+}
+
 func (m Model) openMgmtPicker() (tea.Model, tea.Cmd) { m.screen = screenMgmtPicker; return m, nil } // TODO(plan3): replace stub in Task 8
 func (m Model) openSettings() (tea.Model, tea.Cmd) { m.screen = screenSettings; return m, nil }     // TODO(plan3): replace stub in Task 9
 
