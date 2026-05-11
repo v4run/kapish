@@ -29,11 +29,14 @@ export default function App() {
   const [mgmtCluster, setMgmtCluster] = React.useState('—');
   const [toasts, setToasts] = React.useState<{ id: number; tone: 'error' | 'info'; title: string }[]>([]);
   const toastId = React.useRef(0);
-  const pushToast = (tone: 'error' | 'info', title: string) => {
+  const pushToast = React.useCallback((tone: 'error' | 'info', title: string) => {
     const id = ++toastId.current;
     setToasts((t) => [...t, { id, tone, title }]);
     window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 5000);
-  };
+  }, []);
+
+  const handleDisconnect = React.useCallback(() => setSelectedKey(null), []);
+  const handleTerminalError = React.useCallback((m: string) => pushToast('error', m), [pushToast]);
 
   const refresh = React.useCallback(() => {
     setLoading(true);
@@ -110,7 +113,7 @@ export default function App() {
         </aside>
         {active ? (
           <TerminalSession namespace={active.namespace} cluster={active.name} phase={active.phase}
-            onDisconnect={() => setSelectedKey(null)} onError={(m) => pushToast('error', m)} />
+            onDisconnect={handleDisconnect} onError={handleTerminalError} />
         ) : (
           <div className="flex-1 flex"><SelectClusterEmpty /></div>
         )}
