@@ -73,11 +73,6 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-// View renders the current screen. Full rendering is implemented in Task 6.
-func (m Model) View() string {
-	return ""
-}
-
 // recomputeFiltered re-applies the filter and clamps the cursor, keeping it
 // on the sticky cluster if still present.
 func (m *Model) recomputeFiltered() {
