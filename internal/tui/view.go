@@ -84,8 +84,25 @@ func (m Model) viewError() string {
 		styleStatus.Render("r retry · m mgmt · q quit"))
 }
 
-// Placeholders replaced by later tasks. TODO(plan3): Task 10.
-func (m Model) viewSettings() string { return m.viewCentered("settings (TODO Task 10)") }
+func (m Model) viewSettings() string {
+	c := m.cfg.AppConfig
+	var b strings.Builder
+	b.WriteString(styleTitle.Render("kapish — settings") + "\n\n")
+	b.WriteString(fmt.Sprintf("  shell command:       %s\n", c.Shell.Command))
+	b.WriteString(fmt.Sprintf("  cwd:                 %s\n", c.Shell.Cwd))
+	b.WriteString(fmt.Sprintf("  env count:           %d\n", len(c.Shell.Env)))
+	b.WriteString(fmt.Sprintf("  alias count:         %d\n", len(c.Shell.Aliases)))
+	b.WriteString(fmt.Sprintf("  prompt:              %s\n", c.Shell.Prompt))
+	b.WriteString(fmt.Sprintf("  theme:               %s\n", c.UI.Theme))
+	b.WriteString(fmt.Sprintf("  refreshIntervalSec:  %d\n", c.UI.RefreshIntervalSec))
+	b.WriteString(fmt.Sprintf("  oneShot:             %v\n", c.UI.OneShot))
+	b.WriteString(fmt.Sprintf("  web port:            %d\n", c.Web.DefaultPort))
+	b.WriteString(fmt.Sprintf("  web openBrowser:     %v\n", c.Web.OpenBrowser))
+	b.WriteString(fmt.Sprintf("  web bindAddr:        %s\n", c.Web.BindAddr))
+	b.WriteString(fmt.Sprintf("  mgmt cluster count:  %d\n", len(c.ManagementClusters.Entries)))
+	b.WriteString("\n" + styleStatus.Render("t toggle theme · esc back"))
+	return b.String()
+}
 
 func (m Model) viewMgmtPicker() string {
 	var b strings.Builder

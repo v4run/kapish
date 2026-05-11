@@ -34,6 +34,10 @@ type Config struct {
 	MgmtContext string
 	// OneShot: quit after the first spawned shell exits.
 	OneShot bool
+	// ConfigPath is the absolute path to the config file on disk. When
+	// non-empty, the settings screen persists theme changes back to disk.
+	// Tests pass "" to disable the write.
+	ConfigPath string
 }
 
 // Model is the root bubbletea model.
@@ -190,6 +194,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch m.screen {
+	case screenSettings:
+		return m.handleSettingsKey(msg)
+
 	case screenMgmtPicker:
 		return m.handleMgmtPickerKey(msg)
 
@@ -269,7 +276,7 @@ func (m Model) beginSpawn() (tea.Model, tea.Cmd) {
 }
 
 // openMgmtPicker is defined in mgmtpicker.go.
-func (m Model) openSettings() (tea.Model, tea.Cmd) { m.screen = screenSettings; return m, nil }     // TODO(plan3): replace stub in Task 9
+// openSettings is defined in settings.go.
 
 func (m *Model) applyEvent(ev capi.Event) {
 	switch ev.Type {
