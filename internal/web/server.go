@@ -65,6 +65,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/v1/", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
 	})
+	// Fallback: serve embedded frontend. API routes above are more specific and
+	// win via Go 1.22 ServeMux precedence.
+	s.mux.Handle("/", http.FileServer(http.FS(frontendRoot())))
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
