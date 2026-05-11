@@ -86,6 +86,14 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 // Cache exposes the cluster cache (used by serve to seed/feed it).
 func (s *Server) Cache() *clusterCache { return s.cache }
 
+// ReplaceAll resets the cluster cache to exactly the given clusters (used
+// after a LIST from cmd/kapish/serve).
+func (s *Server) ReplaceAll(clusters []capi.Cluster) { s.cache.replaceAll(clusters) }
+
+// ApplyEvent applies a single cluster watch event to the cache (used by the
+// watch goroutine in cmd/kapish/serve).
+func (s *Server) ApplyEvent(ev capi.Event) { s.cache.applyEvent(ev) }
+
 // Listen binds the configured addr:port. Returns the actual address (useful
 // when Port==0). Call before Serve.
 func (s *Server) Listen() (string, error) {
