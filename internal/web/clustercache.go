@@ -52,23 +52,22 @@ func (c *clusterCache) snapshot() []capi.Cluster {
 
 // applyEvent updates the cache and notifies subscribers (non-blocking; a slow
 // subscriber may drop an event — SSE clients re-fetch the snapshot on connect).
+// The fan-out runs inside mu so that unsub cannot close a channel concurrently
+// with a send (sending on a closed channel panics even with select/default).
+// Each send is non-blocking (default branch), so holding mu during the loop
+// cannot deadlock.
 func (c *clusterCache) applyEvent(ev capi.Event) {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	switch ev.Type {
 	case capi.EventAdded, capi.EventModified:
 		c.byKey[key(ev.Cluster)] = ev.Cluster
 	case capi.EventDeleted:
 		delete(c.byKey, key(ev.Cluster))
 	case capi.EventError:
-		c.mu.Unlock()
 		return
 	}
-	subs := make([]chan capi.Event, 0, len(c.subs))
 	for _, ch := range c.subs {
-		subs = append(subs, ch)
-	}
-	c.mu.Unlock()
-	for _, ch := range subs {
 		select {
 		case ch <- ev:
 		default: // drop on slow subscriber

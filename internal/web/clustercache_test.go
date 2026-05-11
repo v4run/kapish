@@ -1,6 +1,7 @@
 package web
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -67,4 +68,46 @@ func TestClusterCache_UnsubStopsDelivery(t *testing.T) {
 	case <-time.After(time.Second):
 		// also acceptable if implementation just stops sending
 	}
+}
+
+func TestClusterCache_ConcurrentApplyAndUnsubNoPanic(t *testing.T) {
+	c := newClusterCache()
+	var wg sync.WaitGroup
+	stop := make(chan struct{})
+
+	// Several producers hammering applyEvent.
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+					c.applyEvent(capi.Event{Type: capi.EventAdded, Cluster: capi.Cluster{Name: "x", Namespace: "ns"}})
+				}
+			}
+		}()
+	}
+	// Several subscribers churning subscribe/unsub.
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 200; j++ {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				_, unsub := c.subscribe()
+				unsub()
+			}
+		}()
+	}
+	time.Sleep(200 * time.Millisecond)
+	close(stop)
+	wg.Wait()
+	// If we got here without a panic, the race is fixed.
 }
