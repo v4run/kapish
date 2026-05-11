@@ -12,9 +12,9 @@ func (m Model) View() string {
 	case screenError:
 		return m.viewError()
 	case screenSettings:
-		return m.viewSettings() // Task 10 replaces
+		return m.viewSettings()
 	case screenMgmtPicker:
-		return m.viewMgmtPicker() // Task 9 replaces
+		return m.viewMgmtPicker()
 	case screenSpawning:
 		return m.viewCentered("Starting shell…")
 	default:
