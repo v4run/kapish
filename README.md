@@ -8,7 +8,7 @@ A debugging tool for [Cluster API (CAPI)](https://cluster-api.sigs.k8s.io/). Lis
 go install github.com/v4run/kapish/cmd/kapish@latest
 ```
 
-Make sure `$(go env GOBIN)` (or `$(go env GOPATH)/bin` if `GOBIN` is unset) is in `PATH`.
+Make sure `$(go env GOBIN)` (or `$(go env GOPATH)/bin` if `GOBIN` is unset) is in `PATH`. The web UI is embedded in the binary, so no Node toolchain is needed at install time.
 
 Or build from source:
 
@@ -22,12 +22,20 @@ make build
 ## Usage
 
 ```sh
-kapish                    # TUI (lands when implemented in Plan 3)
-kapish serve              # web UI (Plan 4 + Plan 5)
+kapish                    # TUI: pick a cluster, drop into a shell
+kapish serve              # web UI on localhost (opens your browser)
 kapish version            # show version
 kapish config validate    # show merged effective config
 kapish config edit        # edit config in $EDITOR; validate on save
 ```
+
+### TUI
+
+`kapish` (no subcommand) launches the terminal UI. Keys: `↑↓`/`jk`/`gG` navigate, `/` filter, `⏎` spawn a shell for the selected cluster (confirm-on-Failed), `r` refresh, `m` switch management cluster, `s` settings, `q` quit. `--one-shot` exits after the first spawned shell instead of returning to the list.
+
+### Web UI
+
+`kapish serve` starts a localhost HTTP server (binds `127.0.0.1` by default) and opens your browser. The page shows the cluster list (live-updated via SSE); clicking a cluster opens an in-browser terminal (xterm.js over a WebSocket-PTY bridge). The settings page reads/writes config; the management-cluster chip switches between configured management clusters. `--port N` pins the port (default: a free one), `--bind` overrides the bind address (non-loopback prints a warning — there is no authentication), `--no-open` skips the browser launch.
 
 ### Global flags
 
@@ -42,14 +50,31 @@ kapish config edit        # edit config in $EDITOR; validate on save
 
 ## Configuration
 
-Config lives at `~/.config/kapish/config.yaml` by default. On first run, kapish writes a commented template there; edit it with:
+Config lives at `~/.config/kapish/config.yaml` by default (resolution order: `--config` flag > `$KAPISH_CONFIG` > `$XDG_CONFIG_HOME/kapish/config.yaml`). On first run, `kapish config edit` writes a commented template there. The schema covers management clusters, shell command/cwd/env/aliases/prompt, UI theme/refresh, and web bind/port.
+
+See [`docs/superpowers/specs/2026-05-09-kapish-design.md`](docs/superpowers/specs/2026-05-09-kapish-design.md) for the full design.
+
+## Development
 
 ```sh
-kapish config edit
+make build      # build ./bin/kapish (with version/commit ldflags)
+make test       # go test ./...
+make lint       # go vet ./...
+make fmt        # go fmt ./...
+make frontend   # rebuild the web UI: cd internal/web/frontend && npm install && npm run build
 ```
 
-See [`docs/superpowers/specs/2026-05-09-kapish-design.md`](docs/superpowers/specs/2026-05-09-kapish-design.md) for the full schema.
+The web UI is a Vite + React + Tailwind + xterm.js app under `internal/web/frontend/`. The build output (`internal/web/frontend/dist/`) is committed and embedded into the Go binary via `//go:embed` — **after any change to `internal/web/frontend/src/`, run `make frontend` and commit the regenerated `dist/`.**
+
+For frontend hot-reload during development:
+
+```sh
+# terminal 1: Go server (proxies / to the Vite dev server)
+kapish serve --dev --kubeconfig <your kubeconfig>
+# terminal 2: Vite dev server (proxies /api back to the Go server — set the port it printed)
+VITE_KAPISH_API=http://127.0.0.1:<port-from-terminal-1> npm --prefix internal/web/frontend run dev
+```
 
 ## Status
 
-In active development. See `docs/superpowers/plans/` for what's currently being built.
+The TUI and web UI are both functional. Known v1 limitations: the fish-shell prompt prefix is overridden by a user's customized `fish_prompt`; settings editing in the TUI is read-only (theme toggle only) while the web UI has the full editor; CAPI integration targets the (now-deprecated) `v1beta1` API. See `docs/superpowers/plans/` for the implementation history.
