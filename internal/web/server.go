@@ -59,6 +59,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/mgmts", s.handleGetMgmts)
 	s.mux.HandleFunc("PUT /api/v1/mgmts/current", s.handlePutMgmtsCurrent)
 	s.mux.HandleFunc("POST /api/v1/sessions", s.handlePostSessions)
+	s.mux.HandleFunc("GET /api/v1/sessions/{id}/ws", s.handleSessionWS)
 	// More routes added in later tasks.
 	// Catch-all for unknown /api/v1/ paths -> 404 JSON.
 	s.mux.HandleFunc("/api/v1/", func(w http.ResponseWriter, r *http.Request) {
