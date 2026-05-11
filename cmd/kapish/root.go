@@ -21,6 +21,7 @@ env vars, and a prompt scoped to the chosen cluster.
 Run "kapish" (no args) for the TUI, or "kapish serve" for the web UI.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		RunE:          runTUI,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			g, err := readGlobalFlags(cmd)
 			if err != nil {
