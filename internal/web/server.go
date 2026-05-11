@@ -1,7 +1,9 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 
@@ -26,7 +28,8 @@ type Server struct {
 	sessions *sessionStore
 	mux      *http.ServeMux
 	// ln is the listener once Listen() is called.
-	ln net.Listener
+	ln      net.Listener
+	httpSrv *http.Server
 }
 
 // New constructs a Server (does not start listening).
@@ -82,3 +85,37 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 
 // Cache exposes the cluster cache (used by serve to seed/feed it).
 func (s *Server) Cache() *clusterCache { return s.cache }
+
+// Listen binds the configured addr:port. Returns the actual address (useful
+// when Port==0). Call before Serve.
+func (s *Server) Listen() (string, error) {
+	addr := s.opts.BindAddr
+	if s.opts.Port != 0 {
+		addr = net.JoinHostPort(s.opts.BindAddr, fmt.Sprintf("%d", s.opts.Port))
+	} else {
+		addr = net.JoinHostPort(s.opts.BindAddr, "0")
+	}
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return "", fmt.Errorf("web: listen %s: %w", addr, err)
+	}
+	s.ln = ln
+	s.httpSrv = &http.Server{Handler: s.Handler()}
+	return ln.Addr().String(), nil
+}
+
+// Serve runs until Shutdown is called. Returns http.ErrServerClosed on clean shutdown.
+func (s *Server) Serve() error {
+	if s.ln == nil {
+		return fmt.Errorf("web: Serve called before Listen")
+	}
+	return s.httpSrv.Serve(s.ln)
+}
+
+// Shutdown gracefully stops the server.
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s.httpSrv == nil {
+		return nil
+	}
+	return s.httpSrv.Shutdown(ctx)
+}
