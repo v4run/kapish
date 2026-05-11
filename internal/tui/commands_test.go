@@ -55,3 +55,23 @@ func TestConfirmSpawn_YesProceeds_NoCancels(t *testing.T) {
 	require.False(m.confirmingSpawn)
 	require.Equal(screenReady, m.screen)
 }
+
+func TestSpawnFailed_GoesToErrorScreen(t *testing.T) {
+	m := readyModelWith(capi.Cluster{Name: "a", Namespace: "ns"})
+	m.screen = screenSpawning
+	mu, cmd := m.Update(spawnFailedMsg{err: assertErr{}})
+	mm := mu.(Model)
+	assert.Equal(t, screenError, mm.screen)
+	assert.Error(t, mm.err)
+	assert.Nil(t, cmd, "non-one-shot: no quit")
+}
+
+func TestSpawnFailed_OneShotQuitsWithFatalErr(t *testing.T) {
+	m := readyModelWith(capi.Cluster{Name: "a", Namespace: "ns"})
+	m.cfg.OneShot = true
+	m.screen = screenSpawning
+	mu, cmd := m.Update(spawnFailedMsg{err: assertErr{}})
+	mm := mu.(Model)
+	assert.NotNil(t, cmd, "one-shot: should quit")
+	assert.Error(t, mm.FatalErr())
+}

@@ -44,8 +44,9 @@ type Config struct {
 type Model struct {
 	cfg Config
 
-	screen screen
-	err    error
+	screen   screen
+	err      error
+	fatalErr error // set on spawn-prep failure; non-nil causes non-zero exit in one-shot mode
 
 	clusters []capi.Cluster // sorted
 	filter   textinput.Model
@@ -77,6 +78,11 @@ func New(cfg Config) Model {
 		mgmtContext: cfg.MgmtContext,
 	}
 }
+
+// FatalErr returns the error that caused a spawn-prep failure (kubeconfig
+// fetch, shell binary missing, etc.). Non-nil only after a spawnFailedMsg in
+// one-shot mode; callers use it to exit with a non-zero status.
+func (m Model) FatalErr() error { return m.fatalErr }
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(m.loadCmd(), m.refreshTickCmd())
@@ -136,6 +142,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		m.screen = screenReady
+		return m, nil
+
+	case spawnFailedMsg:
+		m.err = msg.err
+		m.screen = screenError
+		if m.cfg.OneShot {
+			m.fatalErr = msg.err
+			return m, tea.Quit
+		}
 		return m, nil
 
 	case refreshTickMsg:

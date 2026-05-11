@@ -75,8 +75,16 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		ConfigPath:  cfgPath,
 	})
 	p := tea.NewProgram(model, tea.WithAltScreen())
-	_, err = p.Run()
-	return err
+	finalModel, err := p.Run()
+	if err != nil {
+		return err
+	}
+	if m, ok := finalModel.(tui.Model); ok {
+		if fe := m.FatalErr(); fe != nil {
+			return fe
+		}
+	}
+	return nil
 }
 
 func indexOfCurrentEntry(c kconfig.Config) int {

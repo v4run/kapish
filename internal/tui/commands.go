@@ -39,7 +39,7 @@ func (m Model) refreshTickCmd() tea.Cmd {
 }
 
 // spawnCmd fetches the kubeconfig and prepares the shell plan, emitting
-// spawnReadyMsg on success or shellExitedMsg on any prep error.
+// spawnReadyMsg on success or spawnFailedMsg on any prep error.
 //
 // Note: tea.ExecProcess must be returned as a tea.Cmd — NOT called immediately.
 // This two-step pattern (spawnCmd → spawnReadyMsg → tea.ExecProcess in Update)
@@ -50,13 +50,13 @@ func (m Model) spawnCmd(c capi.Cluster) tea.Cmd {
 	mgmtCtx := m.mgmtContext
 	return func() tea.Msg {
 		if client == nil {
-			return shellExitedMsg{err: fmt.Errorf("tui: no capi client")}
+			return spawnFailedMsg{err: fmt.Errorf("tui: no capi client")}
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		kc, err := client.FetchKubeconfig(ctx, c.Namespace, c.Name)
 		cancel()
 		if err != nil {
-			return shellExitedMsg{err: err}
+			return spawnFailedMsg{err: err}
 		}
 		opts := shell.Options{
 			PathToShell:    app.Shell.Command,
@@ -74,7 +74,7 @@ func (m Model) spawnCmd(c capi.Cluster) tea.Cmd {
 		}
 		plan, err := shell.PrepareSpawn(opts, kc)
 		if err != nil {
-			return shellExitedMsg{err: err}
+			return spawnFailedMsg{err: err}
 		}
 		return spawnReadyMsg{plan: plan}
 	}

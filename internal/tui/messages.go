@@ -23,3 +23,8 @@ type refreshTickMsg struct{}
 // spawnReadyMsg carries a fully-prepared SpawnPlan. Update handles it by
 // returning tea.ExecProcess so bubbletea can hand off the terminal.
 type spawnReadyMsg struct{ plan *shell.SpawnPlan }
+
+// spawnFailedMsg signals the shell could NOT be launched (kubeconfig fetch
+// failed, shell binary missing, etc.) — as opposed to shellExitedMsg which
+// carries the *shell's own* exit status after a successful launch.
+type spawnFailedMsg struct{ err error }
