@@ -4,6 +4,7 @@
 package tui
 
 import (
+	keybind "github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -125,9 +126,99 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg.err
 		m.screen = screenError
 		return m, nil
+
+	case tea.KeyMsg:
+		return m.handleKey(msg)
 	}
 	return m, nil
 }
+
+func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Filter mode: typing goes to the textinput; Esc/Enter exit it.
+	if m.filter.Focused() {
+		switch msg.Type {
+		case tea.KeyEsc:
+			m.filter.SetValue("")
+			m.filter.Blur()
+			m.recomputeFiltered()
+			return m, nil
+		case tea.KeyEnter:
+			m.filter.Blur()
+			return m, nil
+		default:
+			var cmd tea.Cmd
+			m.filter, cmd = m.filter.Update(msg)
+			m.recomputeFiltered()
+			return m, cmd
+		}
+	}
+
+	switch m.screen {
+	case screenError:
+		switch msg.String() {
+		case "q", "ctrl+c":
+			return m, tea.Quit
+		case "r":
+			m.screen = screenLoading
+			m.err = nil
+			return m, m.loadCmd()
+		}
+		return m, nil
+
+	case screenReady:
+		switch {
+		case keybind.Matches(msg, keys.Quit):
+			return m, tea.Quit
+		case keybind.Matches(msg, keys.Down):
+			if m.cursor < len(m.filtered)-1 {
+				m.cursor++
+				m.stickyKeyFromCursor()
+			}
+			return m, nil
+		case keybind.Matches(msg, keys.Up):
+			if m.cursor > 0 {
+				m.cursor--
+				m.stickyKeyFromCursor()
+			}
+			return m, nil
+		case keybind.Matches(msg, keys.Top):
+			m.cursor = 0
+			m.stickyKeyFromCursor()
+			return m, nil
+		case keybind.Matches(msg, keys.Bottom):
+			if len(m.filtered) > 0 {
+				m.cursor = len(m.filtered) - 1
+				m.stickyKeyFromCursor()
+			}
+			return m, nil
+		case keybind.Matches(msg, keys.Filter):
+			m.filter.Focus()
+			return m, nil
+		case keybind.Matches(msg, keys.Refresh):
+			m.screen = screenLoading
+			return m, m.loadCmd()
+		case keybind.Matches(msg, keys.Spawn):
+			return m.beginSpawn()
+		case keybind.Matches(msg, keys.Mgmt):
+			return m.openMgmtPicker()
+		case keybind.Matches(msg, keys.Settings):
+			return m.openSettings()
+		}
+		return m, nil
+	}
+	return m, nil
+}
+
+func (m *Model) stickyKeyFromCursor() {
+	if m.cursor >= 0 && m.cursor < len(m.filtered) {
+		m.stickyKey = clusterKey(m.filtered[m.cursor])
+	}
+}
+
+func (m Model) loadCmd() tea.Cmd { return nil }                                                      // TODO(plan3): replace stub in Task 7
+func (m Model) beginSpawn() (tea.Model, tea.Cmd) { return m, nil }                                  // TODO(plan3): replace stub in Task 7
+func (m Model) openMgmtPicker() (tea.Model, tea.Cmd) { m.screen = screenMgmtPicker; return m, nil } // TODO(plan3): replace stub in Task 8
+func (m Model) openSettings() (tea.Model, tea.Cmd) { m.screen = screenSettings; return m, nil }     // TODO(plan3): replace stub in Task 9
 
 func (m *Model) applyEvent(ev capi.Event) {
 	switch ev.Type {
