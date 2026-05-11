@@ -17,3 +17,6 @@ coverage.txt
 # kapish runtime
 *.kubeconfig
 kapish-*.tmp/
+
+# frontend
+internal/web/frontend/node_modules/

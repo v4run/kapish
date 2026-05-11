@@ -32,3 +32,7 @@ tidy:
 
 clean:
 	rm -rf $(BINDIR)
+
+.PHONY: frontend
+frontend:
+	cd internal/web/frontend && npm install && npm run build
