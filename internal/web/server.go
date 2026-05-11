@@ -54,6 +54,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/clusters/stream", s.handleClustersStream)
 	s.mux.HandleFunc("GET /api/v1/config", s.handleGetConfig)
 	s.mux.HandleFunc("PUT /api/v1/config", s.handlePutConfig)
+	s.mux.HandleFunc("GET /api/v1/mgmts", s.handleGetMgmts)
+	s.mux.HandleFunc("PUT /api/v1/mgmts/current", s.handlePutMgmtsCurrent)
 	// More routes added in later tasks.
 	// Catch-all for unknown /api/v1/ paths -> 404 JSON.
 	s.mux.HandleFunc("/api/v1/", func(w http.ResponseWriter, r *http.Request) {
