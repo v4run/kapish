@@ -21,9 +21,10 @@ type Options struct {
 
 // Server is the kapish web server.
 type Server struct {
-	opts  Options
-	cache *clusterCache
-	mux   *http.ServeMux
+	opts     Options
+	cache    *clusterCache
+	sessions *sessionStore
+	mux      *http.ServeMux
 	// ln is the listener once Listen() is called.
 	ln net.Listener
 }
@@ -34,9 +35,10 @@ func New(opts Options) (*Server, error) {
 		opts.BindAddr = "127.0.0.1"
 	}
 	s := &Server{
-		opts:  opts,
-		cache: newClusterCache(),
-		mux:   http.NewServeMux(),
+		opts:     opts,
+		cache:    newClusterCache(),
+		sessions: newSessionStore(),
+		mux:      http.NewServeMux(),
 	}
 	s.routes()
 	return s, nil
@@ -56,6 +58,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("PUT /api/v1/config", s.handlePutConfig)
 	s.mux.HandleFunc("GET /api/v1/mgmts", s.handleGetMgmts)
 	s.mux.HandleFunc("PUT /api/v1/mgmts/current", s.handlePutMgmtsCurrent)
+	s.mux.HandleFunc("POST /api/v1/sessions", s.handlePostSessions)
 	// More routes added in later tasks.
 	// Catch-all for unknown /api/v1/ paths -> 404 JSON.
 	s.mux.HandleFunc("/api/v1/", func(w http.ResponseWriter, r *http.Request) {
