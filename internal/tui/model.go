@@ -51,6 +51,7 @@ type Model struct {
 	stickyKey string
 
 	mgmtContext string
+	mgmtCursor  int // cursor index into ManagementClusters.Entries
 
 	// confirmingSpawn is true when a Failed/Deleting cluster was selected and
 	// the user must confirm before spawning.
@@ -142,6 +143,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return shellExitedMsg{err: err}
 		})
 
+	case mgmtSwitchedMsg:
+		m.cfg.CapiClient = msg.client
+		m.mgmtContext = msg.mgmtContext
+		m.cfg.AppConfig.ManagementClusters.Current = msg.entryName
+		m.screen = screenLoading
+		return m, m.loadCmd()
+
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	}
@@ -182,6 +190,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch m.screen {
+	case screenMgmtPicker:
+		return m.handleMgmtPickerKey(msg)
+
 	case screenError:
 		switch msg.String() {
 		case "q", "ctrl+c":
@@ -257,7 +268,7 @@ func (m Model) beginSpawn() (tea.Model, tea.Cmd) {
 	return m, m.spawnCmd(c)
 }
 
-func (m Model) openMgmtPicker() (tea.Model, tea.Cmd) { m.screen = screenMgmtPicker; return m, nil } // TODO(plan3): replace stub in Task 8
+// openMgmtPicker is defined in mgmtpicker.go.
 func (m Model) openSettings() (tea.Model, tea.Cmd) { m.screen = screenSettings; return m, nil }     // TODO(plan3): replace stub in Task 9
 
 func (m *Model) applyEvent(ev capi.Event) {

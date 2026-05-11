@@ -84,6 +84,31 @@ func (m Model) viewError() string {
 		styleStatus.Render("r retry · m mgmt · q quit"))
 }
 
-// Placeholders replaced by later tasks. TODO(plan3): Task 9 / Task 10.
-func (m Model) viewSettings() string   { return m.viewCentered("settings (TODO Task 10)") }
-func (m Model) viewMgmtPicker() string { return m.viewCentered("mgmt picker (TODO Task 9)") }
+// Placeholders replaced by later tasks. TODO(plan3): Task 10.
+func (m Model) viewSettings() string { return m.viewCentered("settings (TODO Task 10)") }
+
+func (m Model) viewMgmtPicker() string {
+	var b strings.Builder
+	b.WriteString(styleTitle.Render("kapish — switch management cluster") + "\n\n")
+	entries := m.cfg.AppConfig.ManagementClusters.Entries
+	current := m.cfg.AppConfig.ManagementClusters.Current
+	if len(entries) == 0 {
+		b.WriteString(styleDim.Render("  No management clusters configured.\n"))
+	} else {
+		for i, e := range entries {
+			cursor := "  "
+			name := e.Name
+			if i == m.mgmtCursor {
+				cursor = styleSelect.Render("▸ ")
+				name = styleSelect.Render(e.Name)
+			}
+			suffix := ""
+			if e.Name == current {
+				suffix = styleDim.Render(" (current)")
+			}
+			b.WriteString(fmt.Sprintf("%s%s%s\n", cursor, name, suffix))
+		}
+	}
+	b.WriteString("\n" + styleStatus.Render("↑↓ select · ⏎ switch · esc cancel"))
+	return b.String()
+}
