@@ -83,6 +83,37 @@ it shrinks to content width as a flex item, so it sits flush-left in the pane.
   `icon={<KapishMark size={36} />}` (drop the `text-muted` wrapper styling so the logo keeps its
   accent/violet colors). Import `KapishMark` from `../brand/KapishMark`.
 
+### 5. CAPI Cluster API: v1beta1 → v1beta2
+
+`internal/capi` imports `sigs.k8s.io/cluster-api/api/core/v1beta1`; recent CAPI management
+clusters log "v1beta1 Cluster is deprecated, use v1beta2 Cluster". `cluster-api v1.13.1` (already
+in `go.mod`) ships `api/core/v1beta2`, which is the storage version. Migrate the package:
+
+- Swap the import alias `clusterv1` to `sigs.k8s.io/cluster-api/api/core/v1beta2` in `list.go`,
+  `watch.go`, `types.go` (and the three `_test.go` files).
+- `list.go`: change `clusterGVR.Version` from `v1beta1` to `v1beta2`; update the doc comment.
+- `types.go` — `FromV1Beta1` → rename to `FromV1Beta2` (update callers in `list.go`/`watch.go`),
+  and adjust field access for the v1beta2 shape:
+  - `v.Status.Phase` — unchanged.
+  - `v.Status.ControlPlaneReady` → `v.Status.Initialization.ControlPlaneInitialized` (`*bool`;
+    nil ⇒ false). Keep kapish's field name `ControlPlaneReady` (it's our own view type).
+  - `v.Status.InfrastructureReady` → `v.Status.Initialization.InfrastructureProvisioned` (`*bool`;
+    nil ⇒ false). Keep kapish's field name `InfrastructureReady`.
+  - `v.Spec.Topology` is now a value (not a pointer): read `v.Spec.Topology.Version` directly
+    (empty string when the topology is not defined) instead of the `!= nil` guard.
+  - `v.Spec.InfrastructureRef` is now a value `ContractVersionedObjectReference` (not a pointer):
+    guard on `v.Spec.InfrastructureRef.Kind != ""` (or `.IsDefined()`) then `providerFromKind(...)`.
+  - `providerFromKind` is unchanged.
+- Update the package/type doc comments that say "v1beta1".
+- Update `internal/capi/*_test.go` to construct `v1beta2.Cluster` fixtures with the new
+  `Status.Initialization` / value-typed `Spec.Topology` / `Spec.InfrastructureRef` shapes, and call
+  `FromV1Beta2`.
+- No change to consumers (`internal/tui`, `internal/web`) — they only touch kapish's `Cluster` type.
+
+Note: this drops the ability to read clusters from a management cluster that *only* serves
+`v1beta1` (pre-CAPI-v1.11). That's acceptable — those versions are EOL and the deprecation warning
+only appears on versions that already serve v1beta2.
+
 ## Testing
 
 - Go: unit test for `expandCwd` (empty, `~`, `~/x`, `$HOME/x`, `${HOME}/x`, plain absolute path,
@@ -90,6 +121,8 @@ it shrinks to content width as a flex item, so it sits flush-left in the pane.
 - Frontend: no test harness in the repo; verify via `cd internal/web/frontend && npm run build` and
   manual click-through (each tab shows only its fields; Save disabled until edit; Discard restores;
   saved indicator appears; reload shows persisted values).
+- Go: update `internal/capi/*_test.go` for v1beta2 fixtures; `go vet ./...` and `go build ./...`
+  must pass (catches missed v1beta1 field references).
 - Run `make test` and `make frontend` before finishing.
 
 ## Out of scope
