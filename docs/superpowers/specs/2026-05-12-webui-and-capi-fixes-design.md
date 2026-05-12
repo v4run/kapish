@@ -114,6 +114,26 @@ Note: this drops the ability to read clusters from a management cluster that *on
 `v1beta1` (pre-CAPI-v1.11). That's acceptable — those versions are EOL and the deprecation warning
 only appears on versions that already serve v1beta2.
 
+### 6. CI workflow validation
+
+Add automated validation that the GitHub Actions workflows (`.github/workflows/*.yml`) are
+well-formed, so a typo in YAML or an unknown action input is caught in CI rather than on push.
+
+- Add an `actionlint` step to `ci.yml` (a `lint` job, or a step in the existing `test` job):
+  ```yaml
+  - name: Lint workflows
+    uses: raven-actions/actionlint@v2
+  ```
+  `actionlint` validates workflow syntax, expression syntax, `runs-on` labels, `uses:` refs, and
+  shell snippets in `run:` blocks (via shellcheck).
+- Add a `make lint-actions` target that runs actionlint locally via `go run`
+  (`go run github.com/rhysd/actionlint/cmd/actionlint@latest`), and wire it into the existing
+  `lint` target so `make lint` covers Go vet + workflow lint. (No new entry in `go.mod` — `go run`
+  with a version suffix uses an ephemeral module cache.)
+- This is the "test cases for the workflows": `actionlint` is the validator; a green
+  `Lint workflows` step (and `make lint-actions` locally) is the pass criterion. It exercises both
+  `build.yml` and `ci.yml`, including the matrix expansion and the `run:` scripts.
+
 ## Testing
 
 - Go: unit test for `expandCwd` (empty, `~`, `~/x`, `$HOME/x`, `${HOME}/x`, plain absolute path,
@@ -123,7 +143,8 @@ only appears on versions that already serve v1beta2.
   saved indicator appears; reload shows persisted values).
 - Go: update `internal/capi/*_test.go` for v1beta2 fixtures; `go vet ./...` and `go build ./...`
   must pass (catches missed v1beta1 field references).
-- Run `make test` and `make frontend` before finishing.
+- Workflows: `make lint-actions` (actionlint) passes against `.github/workflows/*.yml`.
+- Run `make test`, `make lint`, and `make frontend` before finishing.
 
 ## Out of scope
 
