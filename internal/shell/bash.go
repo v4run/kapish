@@ -31,7 +31,7 @@ func bashInit(opts Options, kubeconfigPath string) string {
 }
 
 // posixSingleQuote wraps s in single quotes, ANSI-C-escaping embedded single
-// quotes via the standard '\'' trick. Used for bash/zsh/fish rcfile gen.
+// quotes via the standard '\” trick. Used for bash/zsh/fish rcfile gen.
 func posixSingleQuote(s string) string {
 	if s == "" {
 		return "''"

@@ -15,7 +15,7 @@ func readyModelWith(clusters ...capi.Cluster) Model {
 	return updated.(Model)
 }
 
-func key(r rune) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}} }
+func key(r rune) tea.KeyMsg            { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}} }
 func special(t tea.KeyType) tea.KeyMsg { return tea.KeyMsg{Type: t} }
 
 func TestNav_DownUpClampsAtEnds(t *testing.T) {

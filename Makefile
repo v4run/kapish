@@ -25,7 +25,7 @@ lint:
 	$(GO) vet ./...
 
 fmt:
-	$(GO) fmt ./...
+	$(GO) run golang.org/x/tools/cmd/goimports@latest -w $(shell git ls-files '*.go')
 
 tidy:
 	$(GO) mod tidy
