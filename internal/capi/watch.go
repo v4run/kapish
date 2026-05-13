@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
 // EventType classifies a cluster watch event.
@@ -91,5 +91,5 @@ func clusterFromObject(obj runtime.Object) Cluster {
 	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.UnstructuredContent(), cl); err != nil {
 		return Cluster{}
 	}
-	return FromV1Beta1(cl)
+	return FromV1Beta2(cl)
 }

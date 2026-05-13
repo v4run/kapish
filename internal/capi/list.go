@@ -7,13 +7,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
-// clusterGVR is the GroupVersionResource for cluster.x-k8s.io/v1beta1 Clusters.
+// clusterGVR is the GroupVersionResource for cluster.x-k8s.io/v1beta2 Clusters.
 var clusterGVR = schema.GroupVersionResource{
 	Group:    "cluster.x-k8s.io",
-	Version:  "v1beta1",
+	Version:  "v1beta2",
 	Resource: "clusters",
 }
 
@@ -33,7 +33,7 @@ func (c *Client) ListClusters(ctx context.Context) ([]Cluster, error) {
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(l.Items[i].UnstructuredContent(), cl); err != nil {
 				return nil, fmt.Errorf("capi: convert cluster %s/%s: %w", l.Items[i].GetNamespace(), l.Items[i].GetName(), err)
 			}
-			out = append(out, FromV1Beta1(cl))
+			out = append(out, FromV1Beta2(cl))
 		}
 		return out, nil
 	}
@@ -48,7 +48,7 @@ func (c *Client) ListClusters(ctx context.Context) ([]Cluster, error) {
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(l.Items[i].UnstructuredContent(), cl); err != nil {
 			return nil, fmt.Errorf("capi: convert cluster %s/%s: %w", l.Items[i].GetNamespace(), l.Items[i].GetName(), err)
 		}
-		out = append(out, FromV1Beta1(cl))
+		out = append(out, FromV1Beta2(cl))
 	}
 	return out, nil
 }
