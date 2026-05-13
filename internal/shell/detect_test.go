@@ -45,3 +45,23 @@ func TestDetect_NotInPath(t *testing.T) {
 	_, err := Detect("/totally/not/here/zsh")
 	require.Error(t, err)
 }
+
+func TestDetect_BareNameResolvedViaPATH(t *testing.T) {
+	// Drop an executable "bash" in a temp dir, point $PATH at it, and pass
+	// the bare name — Detect should resolve it via exec.LookPath.
+	dir := t.TempDir()
+	fakeShell := filepath.Join(dir, "bash")
+	require.NoError(t, os.WriteFile(fakeShell, []byte("#!/bin/sh\n"), 0o755))
+	t.Setenv("PATH", dir)
+
+	d, err := Detect("bash")
+	require.NoError(t, err)
+	assert.Equal(t, fakeShell, d.Path)
+	assert.Equal(t, KindBash, d.Kind)
+}
+
+func TestDetect_BareNameNotInPATH(t *testing.T) {
+	t.Setenv("PATH", t.TempDir()) // empty dir
+	_, err := Detect("definitelynotashellbinary")
+	require.Error(t, err)
+}

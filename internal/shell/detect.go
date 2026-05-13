@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // Kind is the v1 supported shell flavor.
@@ -45,6 +47,15 @@ func Detect(provided string) (Detected, error) {
 	}
 	if path == "" {
 		return Detected{}, errors.New("shell: no shell provided and $SHELL is unset")
+	}
+	// Bare names (e.g. "bash" from the settings UI) get resolved via $PATH;
+	// anything with a slash is taken as a literal path and stat-ed.
+	if !strings.ContainsRune(path, filepath.Separator) {
+		resolved, err := exec.LookPath(path)
+		if err != nil {
+			return Detected{}, fmt.Errorf("shell: %s not found in $PATH: %w", path, err)
+		}
+		path = resolved
 	}
 	if _, err := os.Stat(path); err != nil {
 		return Detected{}, fmt.Errorf("shell: %s not found: %w", path, err)
