@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { KapishMark } from '../brand/KapishMark';
 export interface EmptyStateProps { icon?: React.ReactNode; title: string; body?: string; action?: React.ReactNode; }
 export function EmptyState({ icon, title, body, action }: EmptyStateProps) {
   return (
@@ -12,7 +13,7 @@ export function EmptyState({ icon, title, body, action }: EmptyStateProps) {
 }
 export const SelectClusterEmpty = () => (
   <EmptyState
-    icon={<svg width={28} height={28} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="9" y1="6" x2="9" y2="26"/><line x1="9" y1="16" x2="20" y2="7"/><line x1="9" y1="16" x2="24" y2="26"/></svg>}
+    icon={<KapishMark size={36} />}
     title="Select a cluster to start a shell"
     body="Pick any cluster from the list. kapish will fetch its kubeconfig and spawn your configured shell." />
 );
