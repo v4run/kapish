@@ -20,8 +20,6 @@ func fishInit(opts Options, kubeconfigPath string) string {
 		b.WriteString("    if functions -q _kapish_orig_prompt; _kapish_orig_prompt; end\n")
 		b.WriteString("end\n")
 	}
-	if opts.Cwd != "" {
-		b.WriteString("cd " + posixSingleQuote(opts.Cwd) + "\n")
-	}
+	b.WriteString(cdLine(opts.Cwd))
 	return b.String()
 }
