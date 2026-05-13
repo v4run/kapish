@@ -7,7 +7,7 @@ VERSION  := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev
 COMMIT   := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LDFLAGS  := -X $(PKG)/internal/version.Version=$(VERSION) -X $(PKG)/internal/version.Commit=$(COMMIT)
 
-.PHONY: all build install test lint fmt tidy clean
+.PHONY: all build install test lint lint-actions fmt tidy clean
 
 all: build
 
@@ -21,8 +21,11 @@ install:
 test:
 	$(GO) test ./... -count=1
 
-lint:
+lint: lint-actions
 	$(GO) vet ./...
+
+lint-actions:
+	$(GO) run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/*.yml
 
 fmt:
 	$(GO) run golang.org/x/tools/cmd/goimports@latest -w $(shell git ls-files '*.go')

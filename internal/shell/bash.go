@@ -23,9 +23,7 @@ func bashInit(opts Options, kubeconfigPath string) string {
 		b.WriteString("PS1=" + posixSingleQuote(prefix) + `"$PS1"` + "\n")
 	}
 
-	if opts.Cwd != "" {
-		b.WriteString("cd " + posixSingleQuote(opts.Cwd) + "\n")
-	}
+	b.WriteString(cdLine(opts.Cwd))
 
 	return b.String()
 }

@@ -17,8 +17,6 @@ func zshInit(opts Options, kubeconfigPath string) string {
 		prefix := RenderPrompt(opts.PromptTemplate, opts.PromptTokens)
 		b.WriteString("PROMPT=" + posixSingleQuote(prefix) + `"$PROMPT"` + "\n")
 	}
-	if opts.Cwd != "" {
-		b.WriteString("cd " + posixSingleQuote(opts.Cwd) + "\n")
-	}
+	b.WriteString(cdLine(opts.Cwd))
 	return b.String()
 }

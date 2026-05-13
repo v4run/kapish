@@ -115,7 +115,7 @@ export default function App() {
           <TerminalSession namespace={active.namespace} cluster={active.name} phase={active.phase}
             onDisconnect={handleDisconnect} onError={handleTerminalError} />
         ) : (
-          <div className="flex-1 flex"><SelectClusterEmpty /></div>
+          <div className="flex-1"><SelectClusterEmpty /></div>
         )}
       </div>
 

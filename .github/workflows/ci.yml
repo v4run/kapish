@@ -19,7 +19,7 @@ jobs:
 
       - name: Verify formatting
         run: |
-          unformatted=$(go run golang.org/x/tools/cmd/goimports@latest -l $(git ls-files '*.go'))
+          unformatted=$(go run golang.org/x/tools/cmd/goimports@latest -l .)
           if [ -n "$unformatted" ]; then
             echo "These files need goimports:"
             echo "$unformatted"
@@ -31,3 +31,6 @@ jobs:
 
       - name: Test
         run: go test ./... -count=1
+
+      - name: Lint workflows
+        uses: raven-actions/actionlint@v2
