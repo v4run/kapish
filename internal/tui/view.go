@@ -40,11 +40,21 @@ func (m Model) viewList() string {
 			b.WriteString("\n  No CAPI clusters found on " + m.mgmtContext + ". Press 'r' to refresh.\n")
 		}
 	} else {
-		b.WriteString(styleDim.Render(fmt.Sprintf("  %-28s %-12s %-14s %-9s %-10s %s", "NAME", "NS", "PHASE", "VERSION", "PROVIDER", "AGE")) + "\n")
+		// Size the variable-length columns to the widest value present so long
+		// values (e.g. UUID cluster names) don't overflow a fixed width and
+		// push every following column out of alignment.
+		nameW := displayWidth("NAME")
+		nsW := displayWidth("NS")
+		for _, c := range m.filtered {
+			nameW = maxInt(nameW, displayWidth(c.Name))
+			nsW = maxInt(nsW, displayWidth(c.Namespace))
+		}
+		b.WriteString(styleDim.Render(fmt.Sprintf("  %s %s %-14s %-9s %-10s %s",
+			padRight("NAME", nameW), padRight("NS", nsW), "PHASE", "VERSION", "PROVIDER", "AGE")) + "\n")
 		now := time.Now()
 		for i, c := range m.filtered {
 			cursor := "  "
-			name := padRight(c.Name, 28)
+			name := padRight(c.Name, nameW)
 			if i == m.cursor {
 				cursor = styleSelect.Render("▸ ")
 				name = styleSelect.Render(name)
@@ -58,7 +68,7 @@ func (m Model) viewList() string {
 				prov = "-"
 			}
 			b.WriteString(fmt.Sprintf("%s%s %s %s %s %s %s %s\n",
-				cursor, name, padRight(c.Namespace, 12), phaseCell(c.Phase, 14), padRight(ver, 9), padRight(prov, 10), ageString(c.CreationTimestamp, now), phaseGlyph(c.Phase)))
+				cursor, name, padRight(c.Namespace, nsW), phaseCell(c.Phase, 14), padRight(ver, 9), padRight(prov, 10), ageString(c.CreationTimestamp, now), phaseGlyph(c.Phase)))
 		}
 	}
 	if m.confirmingSpawn {

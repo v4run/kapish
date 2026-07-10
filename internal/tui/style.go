@@ -17,6 +17,16 @@ func padRight(s string, w int) string {
 	return s
 }
 
+// displayWidth is the rendered column width of s, ignoring ANSI escapes.
+func displayWidth(s string) int { return lipgloss.Width(s) }
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 var (
 	styleGreen  = lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
 	styleYellow = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
