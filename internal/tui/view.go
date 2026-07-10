@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 func (m Model) View() string {
@@ -39,7 +40,8 @@ func (m Model) viewList() string {
 			b.WriteString("\n  No CAPI clusters found on " + m.mgmtContext + ". Press 'r' to refresh.\n")
 		}
 	} else {
-		b.WriteString(styleDim.Render(fmt.Sprintf("  %-28s %-12s %-14s %-9s %s", "NAME", "NS", "PHASE", "VERSION", "PROVIDER")) + "\n")
+		b.WriteString(styleDim.Render(fmt.Sprintf("  %-28s %-12s %-14s %-9s %-10s %s", "NAME", "NS", "PHASE", "VERSION", "PROVIDER", "AGE")) + "\n")
+		now := time.Now()
 		for i, c := range m.filtered {
 			cursor := "  "
 			name := padRight(c.Name, 28)
@@ -55,8 +57,8 @@ func (m Model) viewList() string {
 			if prov == "" {
 				prov = "-"
 			}
-			b.WriteString(fmt.Sprintf("%s%s %s %s %s %s %s\n",
-				cursor, name, padRight(c.Namespace, 12), phaseCell(c.Phase, 14), padRight(ver, 9), prov, phaseGlyph(c.Phase)))
+			b.WriteString(fmt.Sprintf("%s%s %s %s %s %s %s %s\n",
+				cursor, name, padRight(c.Namespace, 12), phaseCell(c.Phase, 14), padRight(ver, 9), padRight(prov, 10), ageString(c.CreationTimestamp, now), phaseGlyph(c.Phase)))
 		}
 	}
 	if m.confirmingSpawn {
