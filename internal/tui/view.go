@@ -42,10 +42,10 @@ func (m Model) viewList() string {
 		b.WriteString(styleDim.Render(fmt.Sprintf("  %-28s %-12s %-14s %-9s %s", "NAME", "NS", "PHASE", "VERSION", "PROVIDER")) + "\n")
 		for i, c := range m.filtered {
 			cursor := "  "
-			name := c.Name
+			name := padRight(c.Name, 28)
 			if i == m.cursor {
 				cursor = styleSelect.Render("▸ ")
-				name = styleSelect.Render(c.Name)
+				name = styleSelect.Render(name)
 			}
 			ver := c.K8sVersion
 			if ver == "" {
@@ -55,8 +55,8 @@ func (m Model) viewList() string {
 			if prov == "" {
 				prov = "-"
 			}
-			b.WriteString(fmt.Sprintf("%s%-28s %-12s %-14s %-9s %s %s\n",
-				cursor, name, c.Namespace, phaseStyled(c.Phase), ver, prov, phaseGlyph(c.Phase)))
+			b.WriteString(fmt.Sprintf("%s%s %s %s %s %s %s\n",
+				cursor, name, padRight(c.Namespace, 12), phaseCell(c.Phase, 14), padRight(ver, 9), prov, phaseGlyph(c.Phase)))
 		}
 	}
 	if m.confirmingSpawn {

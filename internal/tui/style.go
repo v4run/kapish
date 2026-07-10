@@ -1,6 +1,21 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
+
+// padRight pads s with trailing spaces to the given display width. It measures
+// visible width (ignoring any ANSI escape sequences), so it must be applied to
+// plain text before styling — padding an already-styled string counts the
+// escape bytes and misaligns the column.
+func padRight(s string, w int) string {
+	if pad := w - lipgloss.Width(s); pad > 0 {
+		return s + strings.Repeat(" ", pad)
+	}
+	return s
+}
 
 var (
 	styleGreen  = lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
@@ -26,17 +41,25 @@ func phaseGlyph(phase string) string {
 }
 
 func phaseStyled(phase string) string {
+	return phaseCell(phase, 0)
+}
+
+// phaseCell renders the phase padded to width w (0 = no padding) and colored by
+// phase. Padding happens on the plain text before styling so the column aligns.
+func phaseCell(phase string, w int) string {
+	text := phase
+	if text == "" {
+		text = "-"
+	}
+	text = padRight(text, w)
 	switch phase {
 	case "Provisioned":
-		return styleGreen.Render(phase)
+		return styleGreen.Render(text)
 	case "Provisioning", "Pending":
-		return styleYellow.Render(phase)
+		return styleYellow.Render(text)
 	case "Failed", "Deleting":
-		return styleRed.Render(phase)
+		return styleRed.Render(text)
 	default:
-		if phase == "" {
-			return styleDim.Render("-")
-		}
-		return styleDim.Render(phase)
+		return styleDim.Render(text)
 	}
 }
