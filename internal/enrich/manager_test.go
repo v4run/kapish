@@ -73,3 +73,47 @@ func TestCells_JoinOnNamespace(t *testing.T) {
 	assert.Equal(t, CellReady, cells[0].State)
 	assert.Equal(t, "platform", cells[0].Text)
 }
+
+// stateChangingProvider succeeds on first Fetch, fails on second.
+type stateChangingProvider struct {
+	name  string
+	count int
+}
+
+func (p *stateChangingProvider) Name() string { return p.name }
+func (p *stateChangingProvider) Fetch(context.Context) (map[string]Row, error) {
+	p.count++
+	if p.count == 1 {
+		return map[string]Row{
+			"prod-eu-1": {"monthlyCost": "$412", "nodes": "12"},
+		}, nil
+	}
+	return nil, context.DeadlineExceeded
+}
+
+func TestCells_StaleRowsKeptOnLaterFetchFailure(t *testing.T) {
+	provider := &stateChangingProvider{name: "cost"}
+	specs := []ProviderSpec{{
+		Provider: provider,
+		Interval: time.Minute,
+		Timeout:  time.Second,
+	}}
+	cols := []Column{{Header: "COST", Provider: "cost", Field: "monthlyCost", JoinOn: "name"}}
+	m := NewManager(specs, cols)
+
+	// First refresh succeeds
+	m.refreshOnce(context.Background(), "cost")
+	cells := m.Cells(ClusterRef{Name: "prod-eu-1"})
+	require.Len(t, cells, 1)
+	assert.Equal(t, CellReady, cells[0].State)
+	assert.Equal(t, "$412", cells[0].Text)
+
+	// Second refresh fails
+	m.refreshOnce(context.Background(), "cost")
+	cells = m.Cells(ClusterRef{Name: "prod-eu-1"})
+	// Cell should still be ready with the old text (stale rows kept)
+	assert.Equal(t, CellReady, cells[0].State)
+	assert.Equal(t, "$412", cells[0].Text)
+	// And the provider error should be recorded
+	assert.NotNil(t, m.ProviderErrors()["cost"])
+}
