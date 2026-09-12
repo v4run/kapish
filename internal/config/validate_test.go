@@ -189,3 +189,44 @@ func TestValidate_AggregatesErrors(t *testing.T) {
 	assert.Contains(t, msg, "{nope}")
 	assert.Contains(t, msg, "current")
 }
+
+func validEnrichment() EnrichmentConfig {
+	return EnrichmentConfig{
+		Providers: []EnrichProvider{{
+			Name: "cost", Type: "shell", Command: []string{"kapish-cost", "--all"},
+			Format: "json", Key: "clusterId", RefreshIntervalSec: 300, TimeoutSec: 15,
+		}},
+		Columns: []EnrichColumn{{Header: "COST", Provider: "cost", Field: "monthlyCost", JoinOn: "name"}},
+	}
+}
+
+func TestValidate_EnrichmentOK(t *testing.T) {
+	c := Defaults()
+	c.Enrichment = validEnrichment()
+	assert.NoError(t, Validate(c))
+}
+
+func TestValidate_EnrichmentRejections(t *testing.T) {
+	cases := map[string]func(*EnrichmentConfig){
+		"duplicate provider": func(e *EnrichmentConfig) { e.Providers = append(e.Providers, e.Providers[0]) },
+		"bad type":           func(e *EnrichmentConfig) { e.Providers[0].Type = "http" },
+		"bad format":         func(e *EnrichmentConfig) { e.Providers[0].Format = "tsv" },
+		"empty command":      func(e *EnrichmentConfig) { e.Providers[0].Command = nil },
+		"empty key":          func(e *EnrichmentConfig) { e.Providers[0].Key = "" },
+		"zero interval":      func(e *EnrichmentConfig) { e.Providers[0].RefreshIntervalSec = 0 },
+		"zero timeout":       func(e *EnrichmentConfig) { e.Providers[0].TimeoutSec = 0 },
+		"unknown col prov":   func(e *EnrichmentConfig) { e.Columns[0].Provider = "nope" },
+		"empty field":        func(e *EnrichmentConfig) { e.Columns[0].Field = "" },
+		"bad joinOn":         func(e *EnrichmentConfig) { e.Columns[0].JoinOn = "label" },
+		"empty header":       func(e *EnrichmentConfig) { e.Columns[0].Header = "" },
+	}
+	for name, mutate := range cases {
+		t.Run(name, func(t *testing.T) {
+			c := Defaults()
+			e := validEnrichment()
+			mutate(&e)
+			c.Enrichment = e
+			assert.Error(t, Validate(c))
+		})
+	}
+}

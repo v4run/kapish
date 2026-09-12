@@ -112,6 +112,54 @@ func validateShell(s ShellConfig) []error {
 	return errs
 }
 
+func validateEnrichment(e EnrichmentConfig) []error {
+	var errs []error
+	names := make(map[string]bool)
+	for _, p := range e.Providers {
+		if p.Name == "" {
+			errs = append(errs, fmt.Errorf("config: enrichment provider has empty name"))
+			continue
+		}
+		if names[p.Name] {
+			errs = append(errs, fmt.Errorf("config: duplicate enrichment provider %q", p.Name))
+		}
+		names[p.Name] = true
+		if p.Type != "shell" {
+			errs = append(errs, fmt.Errorf("config: enrichment provider %q: unsupported type %q (want shell)", p.Name, p.Type))
+		}
+		if p.Format != "" && p.Format != "json" {
+			errs = append(errs, fmt.Errorf("config: enrichment provider %q: unsupported format %q (want json)", p.Name, p.Format))
+		}
+		if len(p.Command) == 0 {
+			errs = append(errs, fmt.Errorf("config: enrichment provider %q: command is empty", p.Name))
+		}
+		if p.Key == "" {
+			errs = append(errs, fmt.Errorf("config: enrichment provider %q: key is empty", p.Name))
+		}
+		if p.RefreshIntervalSec <= 0 {
+			errs = append(errs, fmt.Errorf("config: enrichment provider %q: refreshIntervalSec must be > 0", p.Name))
+		}
+		if p.TimeoutSec <= 0 {
+			errs = append(errs, fmt.Errorf("config: enrichment provider %q: timeoutSec must be > 0", p.Name))
+		}
+	}
+	for i, c := range e.Columns {
+		if c.Provider == "" || !names[c.Provider] {
+			errs = append(errs, fmt.Errorf("config: enrichment column %d references unknown provider %q", i, c.Provider))
+		}
+		if c.Field == "" {
+			errs = append(errs, fmt.Errorf("config: enrichment column %d has empty field", i))
+		}
+		if c.JoinOn != "name" && c.JoinOn != "namespace" {
+			errs = append(errs, fmt.Errorf("config: enrichment column %d: joinOn must be name or namespace", i))
+		}
+		if c.Header == "" {
+			errs = append(errs, fmt.Errorf("config: enrichment column %d has empty header", i))
+		}
+	}
+	return errs
+}
+
 // Validate runs every individual validator and returns a single error that
 // joins all messages (errors.Join) so the user sees every problem at once,
 // not just the first.
@@ -122,6 +170,7 @@ func Validate(c Config) error {
 	all = append(all, validateAliases(c.Shell.Aliases)...)
 	all = append(all, validatePrompt(c.Shell.Prompt)...)
 	all = append(all, validateMgmt(c.ManagementClusters)...)
+	all = append(all, validateEnrichment(c.Enrichment)...)
 	if len(all) == 0 {
 		return nil
 	}
