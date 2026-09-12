@@ -39,6 +39,25 @@ func TestShell_SkipsRowsMissingKey(t *testing.T) {
 	assert.Equal(t, "a", rows["c1"]["v"], "first wins on duplicate key")
 }
 
+func TestShell_NestedValuesStringifyAsJSON(t *testing.T) {
+	path := writeTemp(t, `[{"id":"c1","meta":{"a":1},"tags":["x","y"]}]`)
+	p := NewShellProvider("cost", []string{"cat", path}, "id")
+	rows, err := p.Fetch(context.Background())
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, `{"a":1}`, rows["c1"]["meta"])
+	assert.Equal(t, `["x","y"]`, rows["c1"]["tags"])
+}
+
+func TestShell_SkipsRowsWithNullKey(t *testing.T) {
+	path := writeTemp(t, `[{"id":null,"v":"a"},{"id":"c2","v":"b"}]`)
+	p := NewShellProvider("x", []string{"cat", path}, "id")
+	rows, err := p.Fetch(context.Background())
+	require.NoError(t, err)
+	require.Len(t, rows, 1, "null key stringifies to empty string and is skipped")
+	assert.Equal(t, "b", rows["c2"]["v"])
+}
+
 func TestShell_MalformedJSONIsError(t *testing.T) {
 	p := NewShellProvider("x", []string{"printf", "not json"}, "id")
 	_, err := p.Fetch(context.Background())

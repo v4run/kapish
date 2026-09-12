@@ -15,6 +15,14 @@ func buildEnrichmentManager(cfg kconfig.EnrichmentConfig) *enrich.Manager {
 	valid := make(map[string]bool)
 	var specs []enrich.ProviderSpec
 	for _, p := range cfg.Providers {
+		if p.Name == "" {
+			slog.Warn("enrichment: skipping provider with empty name", "type", p.Type)
+			continue
+		}
+		if valid[p.Name] {
+			slog.Warn("enrichment: skipping duplicate provider", "name", p.Name)
+			continue
+		}
 		if p.Type != "shell" || len(p.Command) == 0 || p.Key == "" || p.RefreshIntervalSec <= 0 || p.TimeoutSec <= 0 {
 			slog.Warn("enrichment: skipping invalid provider", "name", p.Name, "type", p.Type)
 			continue
