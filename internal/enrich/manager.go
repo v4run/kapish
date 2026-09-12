@@ -3,6 +3,7 @@ package enrich
 import (
 	"context"
 	"sync"
+	"time"
 )
 
 type providerState struct {
@@ -126,4 +127,36 @@ func (m *Manager) refreshOnce(ctx context.Context, name string) {
 	m.mu.Unlock()
 
 	m.signal()
+}
+
+// Start launches a refresh goroutine per provider. Each fetches immediately,
+// then on its Interval, until ctx is canceled.
+func (m *Manager) Start(ctx context.Context) {
+	for name, spec := range m.specs {
+		go m.runProvider(ctx, name, spec.Interval)
+	}
+}
+
+// RefreshAll refreshes every provider once, synchronously.
+func (m *Manager) RefreshAll(ctx context.Context) {
+	for name := range m.specs {
+		m.refreshOnce(ctx, name)
+	}
+}
+
+func (m *Manager) runProvider(ctx context.Context, name string, interval time.Duration) {
+	if interval <= 0 {
+		interval = 5 * time.Minute
+	}
+	m.refreshOnce(ctx, name)
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			m.refreshOnce(ctx, name)
+		}
+	}
 }
