@@ -44,6 +44,23 @@ web:
   defaultPort: 0              # 0 = pick free port
   openBrowser: true
   bindAddr: "127.0.0.1"       # any non-loopback requires --bind override
+
+# Enrich the cluster list with extra columns sourced from external commands.
+# enrichment:
+#   providers:
+#     - name: cost              # unique id referenced by columns
+#       type: shell             # only "shell" is supported
+#       command: ["kapish-cost", "--all"]  # argv; run directly, never via a shell
+#       format: json            # provider must print a JSON array of flat objects
+#       key: clusterId          # field in each row used as the join value
+#       refreshIntervalSec: 300
+#       timeoutSec: 15
+#   columns:
+#     - header: COST/mo         # column header
+#       provider: cost          # must reference a provider above
+#       field: monthlyCost      # row field to display
+#       joinOn: name            # cluster field matched against the provider key (name|namespace)
+#       width: 10               # optional; 0 = auto-size
 `
 
 // EnsureFirstRunTemplate writes the first-run template to path if no file is
