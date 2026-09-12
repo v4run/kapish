@@ -20,6 +20,9 @@ type shellExitedMsg struct{ err error }
 // refreshTickMsg fires on the periodic re-LIST timer.
 type refreshTickMsg struct{}
 
+// enrichUpdatedMsg fires when the enrichment manager's cache changes.
+type enrichUpdatedMsg struct{}
+
 // spawnReadyMsg carries a fully-prepared SpawnPlan. Update handles it by
 // returning tea.ExecProcess so bubbletea can hand off the terminal.
 type spawnReadyMsg struct{ plan *shell.SpawnPlan }

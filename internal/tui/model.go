@@ -10,6 +10,7 @@ import (
 
 	"github.com/v4run/kapish/internal/capi"
 	kconfig "github.com/v4run/kapish/internal/config"
+	"github.com/v4run/kapish/internal/enrich"
 )
 
 type screen int
@@ -38,6 +39,8 @@ type Config struct {
 	// non-empty, the settings screen persists theme changes back to disk.
 	// Tests pass "" to disable the write.
 	ConfigPath string
+	// Enrichment supplies extra cluster-list columns. May be nil.
+	Enrichment *enrich.Manager
 }
 
 // Model is the root bubbletea model.
@@ -85,7 +88,7 @@ func New(cfg Config) Model {
 func (m Model) FatalErr() error { return m.fatalErr }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.loadCmd(), m.refreshTickCmd())
+	return tea.Batch(m.loadCmd(), m.refreshTickCmd(), m.enrichUpdatesCmd())
 }
 
 // recomputeFiltered re-applies the filter and clamps the cursor, keeping it
@@ -155,6 +158,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case refreshTickMsg:
 		return m, tea.Batch(m.loadCmd(), m.refreshTickCmd())
+
+	case enrichUpdatedMsg:
+		// Cache changed; re-render happens automatically. Re-subscribe.
+		return m, m.enrichUpdatesCmd()
 
 	case spawnReadyMsg:
 		return m, tea.ExecProcess(msg.plan.Cmd, func(err error) tea.Msg {
