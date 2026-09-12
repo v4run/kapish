@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/v4run/kapish/internal/enrich"
 )
 
 func (m Model) View() string {
@@ -40,18 +42,48 @@ func (m Model) viewList() string {
 			b.WriteString("\n  No CAPI clusters found on " + m.mgmtContext + ". Press 'r' to refresh.\n")
 		}
 	} else {
-		// Size the variable-length columns to the widest value present so long
-		// values (e.g. UUID cluster names) don't overflow a fixed width and
-		// push every following column out of alignment.
+		// Enrichment columns (may be none).
+		var ecols []enrich.Column
+		if mgr := m.cfg.Enrichment; mgr != nil {
+			ecols = mgr.Columns()
+		}
+
+		// Precompute per-row enrichment cells and column widths.
+		ecW := make([]int, len(ecols))
+		for i, col := range ecols {
+			ecW[i] = maxInt(displayWidth(col.Header), col.Width)
+		}
+		rowCells := make([][]enrich.Cell, len(m.filtered))
+		ageW := displayWidth("AGE")
+		now := time.Now()
+		for r, c := range m.filtered {
+			ageW = maxInt(ageW, displayWidth(ageString(c.CreationTimestamp, now)))
+			if mgr := m.cfg.Enrichment; mgr != nil {
+				cells := mgr.Cells(enrich.ClusterRef{Name: c.Name, Namespace: c.Namespace})
+				rowCells[r] = cells
+				for i := range ecols {
+					ecW[i] = maxInt(ecW[i], displayWidth(enrichCellText(cells[i])))
+				}
+			}
+		}
+
+		// Dynamic name/ns widths (unchanged behavior).
 		nameW := displayWidth("NAME")
 		nsW := displayWidth("NS")
 		for _, c := range m.filtered {
 			nameW = maxInt(nameW, displayWidth(c.Name))
 			nsW = maxInt(nsW, displayWidth(c.Namespace))
 		}
-		b.WriteString(styleDim.Render(fmt.Sprintf("  %s %s %-14s %-9s %-10s %s",
-			padRight("NAME", nameW), padRight("NS", nsW), "PHASE", "VERSION", "PROVIDER", "AGE")) + "\n")
-		now := time.Now()
+
+		// Header.
+		header := fmt.Sprintf("  %s %s %-14s %-9s %-10s %s",
+			padRight("NAME", nameW), padRight("NS", nsW), "PHASE", "VERSION", "PROVIDER", padRight("AGE", ageW))
+		for i, col := range ecols {
+			header += " " + padRight(col.Header, ecW[i])
+		}
+		b.WriteString(styleDim.Render(header) + "\n")
+
+		// Rows.
 		for i, c := range m.filtered {
 			cursor := "  "
 			name := padRight(c.Name, nameW)
@@ -67,8 +99,27 @@ func (m Model) viewList() string {
 			if prov == "" {
 				prov = "-"
 			}
-			b.WriteString(fmt.Sprintf("%s%s %s %s %s %s %s %s\n",
-				cursor, name, padRight(c.Namespace, nsW), phaseCell(c.Phase, 14), padRight(ver, 9), padRight(prov, 10), ageString(c.CreationTimestamp, now), phaseGlyph(c.Phase)))
+			line := fmt.Sprintf("%s%s %s %s %s %s %s",
+				cursor, name, padRight(c.Namespace, nsW), phaseCell(c.Phase, 14),
+				padRight(ver, 9), padRight(prov, 10), padRight(ageString(c.CreationTimestamp, now), ageW))
+			for j := range ecols {
+				line += " " + enrichCellRender(rowCells[i][j], ecW[j])
+			}
+			line += " " + phaseGlyph(c.Phase)
+			b.WriteString(line + "\n")
+		}
+
+		// Explain the selected row's enrichment errors, if any.
+		if mgr := m.cfg.Enrichment; mgr != nil && m.cursor >= 0 && m.cursor < len(rowCells) {
+			perr := mgr.ProviderErrors()
+			for j, col := range ecols {
+				if rowCells[m.cursor][j].State == enrich.CellError {
+					if e := perr[col.Provider]; e != nil {
+						b.WriteString(styleRed.Render("  "+col.Header+": "+e.Error()) + "\n")
+						break
+					}
+				}
+			}
 		}
 	}
 	if m.confirmingSpawn {

@@ -10,6 +10,7 @@ type Config struct {
 	Shell              ShellConfig              `yaml:"shell"              json:"shell"`
 	UI                 UIConfig                 `yaml:"ui"                 json:"ui"`
 	Web                WebConfig                `yaml:"web"                json:"web"`
+	Enrichment         EnrichmentConfig         `yaml:"enrichment,omitempty" json:"enrichment,omitempty"`
 }
 
 type ManagementClustersConfig struct {
@@ -42,6 +43,32 @@ type WebConfig struct {
 	DefaultPort int    `yaml:"defaultPort"  json:"defaultPort"`
 	OpenBrowser bool   `yaml:"openBrowser"  json:"openBrowser"`
 	BindAddr    string `yaml:"bindAddr"     json:"bindAddr"`
+}
+
+// EnrichmentConfig configures extra cluster-list columns joined from providers.
+type EnrichmentConfig struct {
+	Providers []EnrichProvider `yaml:"providers,omitempty" json:"providers,omitempty"`
+	Columns   []EnrichColumn   `yaml:"columns,omitempty"   json:"columns,omitempty"`
+}
+
+// EnrichProvider is one enrichment data source. Only type "shell" is supported.
+type EnrichProvider struct {
+	Name               string   `yaml:"name"               json:"name"`
+	Type               string   `yaml:"type"               json:"type"`
+	Command            []string `yaml:"command,omitempty"  json:"command,omitempty"`
+	Format             string   `yaml:"format,omitempty"   json:"format,omitempty"`
+	Key                string   `yaml:"key,omitempty"      json:"key,omitempty"`
+	RefreshIntervalSec int      `yaml:"refreshIntervalSec,omitempty" json:"refreshIntervalSec,omitempty"`
+	TimeoutSec         int      `yaml:"timeoutSec,omitempty" json:"timeoutSec,omitempty"`
+}
+
+// EnrichColumn is one configured column reading a field from a provider row.
+type EnrichColumn struct {
+	Header   string `yaml:"header"          json:"header"`
+	Provider string `yaml:"provider"        json:"provider"`
+	Field    string `yaml:"field"           json:"field"`
+	JoinOn   string `yaml:"joinOn"          json:"joinOn"`
+	Width    int    `yaml:"width,omitempty" json:"width,omitempty"`
 }
 
 // Defaults returns a fresh built-in Config. Each call returns an

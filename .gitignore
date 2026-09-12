@@ -20,3 +20,6 @@ kapish-*.tmp/
 
 # frontend
 internal/web/frontend/node_modules/
+
+# local session helpers
+resume.sh

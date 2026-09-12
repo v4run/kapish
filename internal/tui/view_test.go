@@ -3,10 +3,12 @@ package tui
 import (
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"github.com/v4run/kapish/internal/capi"
+	"github.com/v4run/kapish/internal/enrich"
 )
 
 func TestView_ListShowsClustersAndHeader(t *testing.T) {
@@ -57,4 +59,40 @@ func TestView_ErrorState(t *testing.T) {
 	out := m.View()
 	assert.Contains(t, out, "boom")
 	assert.Contains(t, strings.ToLower(out), "retry")
+}
+
+func TestView_EnrichmentColumns(t *testing.T) {
+	m := New(Config{MgmtContext: "mgmt-eu", Enrichment: readyManager()})
+	mu, _ := m.Update(tea.WindowSizeMsg{Width: 140, Height: 30})
+	m = mu.(Model)
+	mu, _ = m.Update(clustersLoadedMsg{clusters: []capi.Cluster{
+		{Name: "prod-eu-1", Namespace: "prod", Phase: "Provisioned", K8sVersion: "v1.30.2", Provider: "aws"},
+		{Name: "other", Namespace: "prod", Phase: "Failed", Provider: "gcp"},
+	}})
+	m = mu.(Model)
+
+	out := m.View()
+	assert.Contains(t, out, "COST", "enrichment header shows")
+	assert.Contains(t, out, "$412", "joined value shows for matching cluster")
+	// "other" has no matching row -> empty marker rendered somewhere.
+	assert.Contains(t, out, "-")
+}
+
+func TestView_EnrichmentPending(t *testing.T) {
+	// Manager with a provider that has never fetched -> pending marker.
+	specs := []enrich.ProviderSpec{{
+		Provider: enrich.NewStaticProvider("cost", map[string]enrich.Row{"prod-eu-1": {"monthlyCost": "$1"}}),
+		Interval: time.Hour, Timeout: time.Second,
+	}}
+	cols := []enrich.Column{{Header: "COST", Provider: "cost", Field: "monthlyCost", JoinOn: "name"}}
+	mgr := enrich.NewManager(specs, cols) // NOT refreshed
+
+	m := New(Config{MgmtContext: "mgmt-eu", Enrichment: mgr})
+	mu, _ := m.Update(tea.WindowSizeMsg{Width: 140, Height: 30})
+	m = mu.(Model)
+	mu, _ = m.Update(clustersLoadedMsg{clusters: []capi.Cluster{
+		{Name: "prod-eu-1", Namespace: "prod", Phase: "Provisioned"},
+	}})
+	m = mu.(Model)
+	assert.Contains(t, m.View(), "…", "pending marker shows before first fetch")
 }

@@ -38,6 +38,19 @@ func (m Model) refreshTickCmd() tea.Cmd {
 	return tea.Tick(d, func(time.Time) tea.Msg { return refreshTickMsg{} })
 }
 
+// enrichUpdatesCmd blocks on the enrichment manager's update channel and emits
+// enrichUpdatedMsg. Returns nil when no manager is configured.
+func (m Model) enrichUpdatesCmd() tea.Cmd {
+	mgr := m.cfg.Enrichment
+	if mgr == nil {
+		return nil
+	}
+	return func() tea.Msg {
+		<-mgr.Updates()
+		return enrichUpdatedMsg{}
+	}
+}
+
 // spawnCmd fetches the kubeconfig and prepares the shell plan, emitting
 // spawnReadyMsg on success or spawnFailedMsg on any prep error.
 //

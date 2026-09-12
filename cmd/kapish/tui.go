@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/v4run/kapish/internal/capi"
 	kconfig "github.com/v4run/kapish/internal/config"
+	"github.com/v4run/kapish/internal/enrich"
 	"github.com/v4run/kapish/internal/tui"
 )
 
@@ -67,12 +69,21 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("connect to management cluster: %w", err)
 	}
 
+	// Build + start enrichment (nil when unconfigured or all blocks invalid).
+	var enrichMgr *enrich.Manager
+	if enrichMgr = buildEnrichmentManager(app.Enrichment); enrichMgr != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		enrichMgr.Start(ctx)
+	}
+
 	model := tui.New(tui.Config{
 		CapiClient:  client,
 		AppConfig:   app,
 		MgmtContext: client.Context(),
 		OneShot:     app.UI.OneShot,
 		ConfigPath:  cfgPath,
+		Enrichment:  enrichMgr,
 	})
 	p := tea.NewProgram(model, tea.WithAltScreen())
 	finalModel, err := p.Run()
