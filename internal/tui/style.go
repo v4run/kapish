@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/v4run/kapish/internal/enrich"
 )
 
 // padRight pads s with trailing spaces to the given display width. It measures
@@ -36,6 +37,34 @@ var (
 	styleSelect = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("213"))
 	styleStatus = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 )
+
+// enrichCellText is the plain (unstyled) text an enrichment cell occupies —
+// used both for width measurement and for the Ready rendering.
+func enrichCellText(c enrich.Cell) string {
+	switch c.State {
+	case enrich.CellReady:
+		return c.Text
+	case enrich.CellError:
+		return "!"
+	case enrich.CellEmpty:
+		return "-"
+	default: // CellPending
+		return "…"
+	}
+}
+
+// enrichCellRender pads the cell to width w and applies its state styling.
+func enrichCellRender(c enrich.Cell, w int) string {
+	text := padRight(enrichCellText(c), w)
+	switch c.State {
+	case enrich.CellReady:
+		return text
+	case enrich.CellError:
+		return styleRed.Render(text)
+	default: // Empty, Pending
+		return styleDim.Render(text)
+	}
+}
 
 func phaseGlyph(phase string) string {
 	switch phase {
